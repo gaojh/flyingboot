@@ -1,5 +1,7 @@
 package com.gao.flying.context;
 
+import cn.hutool.core.thread.ThreadUtil;
+import cn.hutool.core.util.ClassUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.log.Log;
 import cn.hutool.log.LogFactory;
@@ -11,17 +13,23 @@ import com.gao.flying.ioc.annotation.Value;
 import com.gao.flying.ioc.bean.BeanDefine;
 import com.gao.flying.mvc.ApplicationRunner;
 import com.gao.flying.mvc.annotation.Ctrl;
+import com.gao.flying.mvc.annotation.Filter;
 import com.gao.flying.mvc.annotation.Route;
 import com.gao.flying.mvc.annotation.Setup;
+import com.gao.flying.mvc.filter.FlyingFilter;
+import com.gao.flying.mvc.http.FlyingRequest;
+import com.gao.flying.mvc.http.FlyingResponse;
+import com.gao.flying.mvc.http.FlyingRoute;
+import com.gao.flying.mvc.utils.PathMatcher;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.reflections.Reflections;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.*;
@@ -38,19 +46,22 @@ public class ServerContext {
     private Props props;
 
     @Getter
-    private ConcurrentHashMap<String, com.gao.flying.mvc.http.Route> routeMap = new ConcurrentHashMap<>();
+    private ConcurrentHashMap<String, FlyingRoute> routeGetMap = new ConcurrentHashMap<>();
+    private ConcurrentHashMap<String, FlyingRoute> routeGetPatternMap = new ConcurrentHashMap<>();
+    @Getter
+    private ConcurrentHashMap<String, FlyingRoute> routePostMap = new ConcurrentHashMap<>();
+    private ConcurrentHashMap<String, FlyingRoute> routePostPatternMap = new ConcurrentHashMap<>();
 
     private ConcurrentHashMap<String, Class<?>> beanClassMap = new ConcurrentHashMap<>();
 
     private ConcurrentHashMap<String, BeanDefine> beanDefineMap = new ConcurrentHashMap<>();
     private ConcurrentHashMap<String, BeanDefine> initBeanDefineMap = new ConcurrentHashMap<>();
     private TreeMap<Integer, ApplicationRunner> setupMap = new TreeMap<>();
+    private TreeMap<Integer, FlyingFilter> filterMap = new TreeMap<>();
 
     @Getter
     private ExecutorService executorService;
 
-
-    private Reflections reflections;
 
     private static Log log = LogFactory.get();
 
@@ -63,9 +74,9 @@ public class ServerContext {
 
         executorService = new ThreadPoolExecutor(props.getInt(FlyingConst.DISPATHCER_THREAD_CORE_SIZE, 600), props.getInt(FlyingConst.DISPATHCER_THREAD_MAX_SIZE, 1500), 0, TimeUnit.MILLISECONDS, new SynchronousQueue<>(), new DefaultThreadFactory("dispatcher-pool"));
 
-        reflections = new Reflections(props.getStr(FlyingConst.BASE_PACKAGE_STRING));
         try {
             initBeans();
+            initFilter();
             initController();
             initSetup();
         } catch (Exception e) {
@@ -74,8 +85,23 @@ public class ServerContext {
 
     }
 
-    public com.gao.flying.mvc.http.Route getRoute(String url) {
-        return routeMap.get(url);
+    public FlyingRoute fetchGetRoute(String url) {
+        return getRoute(url, routeGetMap, routeGetPatternMap);
+    }
+
+    public FlyingRoute fetchPostRoute(String url) {
+        return getRoute(url, routePostMap, routePostPatternMap);
+    }
+
+    private FlyingRoute getRoute(String url, ConcurrentHashMap<String, FlyingRoute> routeMap, ConcurrentHashMap<String, FlyingRoute> routePatternMap) {
+        FlyingRoute route = routeMap.get(url);
+        if (route == null) {
+            Optional<FlyingRoute> optional = routePatternMap.entrySet().stream().filter(entry -> PathMatcher.me.match(entry.getKey(), url)).map(Map.Entry::getValue).findFirst();
+            if (optional.isPresent()) {
+                route = optional.get();
+            }
+        }
+        return route;
     }
 
     /**
@@ -83,8 +109,7 @@ public class ServerContext {
      */
     private void initBeans() throws Exception {
         log.info("开始初始化Bean");
-        Set<Class<?>> beans = reflections.getTypesAnnotatedWith(Bean.class);
-
+        Set<Class<?>> beans = ClassUtil.scanPackageByAnnotation(props.getStr(FlyingConst.BASE_PACKAGE_STRING), Bean.class);
         //先将有注解bean的class以及其接口，都放入map中待用
         beans.forEach(clazz -> {
 
@@ -158,12 +183,28 @@ public class ServerContext {
 
     }
 
+
+    private void initFilter() throws Exception {
+        log.info("开始初始化Filter");
+        Set<Class<?>> filters = ClassUtil.scanPackageByAnnotation(props.getStr(FlyingConst.BASE_PACKAGE_STRING), Filter.class);
+        for (Class<?> clazz : filters) {
+
+            Filter filter = clazz.getAnnotation(Filter.class);
+            FlyingFilter obj = (FlyingFilter) clazz.newInstance();
+            filterMap.put(filter.order(), obj);
+
+            //设置field
+            Field[] fields = clazz.getDeclaredFields();
+            setFields(clazz, obj, fields);
+        }
+    }
+
     /**
      * 初始化Controller
      */
     private void initController() throws Exception {
         log.info("开始初始化Controller");
-        Set<Class<?>> controllers = reflections.getTypesAnnotatedWith(Ctrl.class);
+        Set<Class<?>> controllers = ClassUtil.scanPackageByAnnotation(props.getStr(FlyingConst.BASE_PACKAGE_STRING), Ctrl.class);
         for (Class clazz : controllers) {
             Route c = (Route) clazz.getAnnotation(Route.class);
             String path = c == null ? "/" : c.value();
@@ -183,8 +224,30 @@ public class ServerContext {
                         url = "/" + url;
                     }
                     url = StrUtil.replace(url, "//", "/");
+
                     log.info("注册：{} --> {}", url, clazz.getName() + "." + method.getName());
-                    routeMap.putIfAbsent(url, new com.gao.flying.mvc.http.Route(clazz, obj, method));
+
+                    if (rm.method().equals(Route.METHOD.GET)) {
+                        if (PathMatcher.me.isPattern(url)) {
+                            routeGetPatternMap.putIfAbsent(url, new FlyingRoute(clazz, obj, method, url));
+                        } else {
+                            routeGetMap.putIfAbsent(url, new FlyingRoute(clazz, obj, method, url));
+                        }
+                    } else if (rm.method().equals(Route.METHOD.POST)) {
+                        if (PathMatcher.me.isPattern(url)) {
+                            routePostPatternMap.putIfAbsent(url, new FlyingRoute(clazz, obj, method, url));
+                        } else {
+                            routePostMap.putIfAbsent(url, new FlyingRoute(clazz, obj, method, url));
+                        }
+                    } else {
+                        if (PathMatcher.me.isPattern(url)) {
+                            routeGetPatternMap.putIfAbsent(url, new FlyingRoute(clazz, obj, method, url));
+                            routePostPatternMap.putIfAbsent(url, new FlyingRoute(clazz, obj, method, url));
+                        } else {
+                            routeGetMap.putIfAbsent(url, new FlyingRoute(clazz, obj, method, url));
+                            routePostMap.putIfAbsent(url, new FlyingRoute(clazz, obj, method, url));
+                        }
+                    }
                 }
             }
         }
@@ -280,7 +343,7 @@ public class ServerContext {
     }
 
     private void initSetup() throws Exception {
-        Set<Class<?>> setups = reflections.getTypesAnnotatedWith(Setup.class);
+        Set<Class<?>> setups = ClassUtil.scanPackageByAnnotation(props.getStr(FlyingConst.BASE_PACKAGE_STRING), Setup.class);
         for (Class<?> clazz : setups) {
             Setup setup = clazz.getAnnotation(Setup.class);
             ApplicationRunner obj = (ApplicationRunner) clazz.newInstance();
@@ -291,14 +354,24 @@ public class ServerContext {
             setFields(clazz, obj, fields);
         }
 
-        executeSetup();
+        //异步执行setup
+        ThreadUtil.execute(this::executeSetup);
     }
 
-    private void executeSetup() {
+    public void executeSetup() {
         //执行
         for (Map.Entry<Integer, ApplicationRunner> entry : setupMap.entrySet()) {
             entry.getValue().run();
         }
     }
 
+    public boolean executeFilter(FlyingRequest flyingRequest, FlyingResponse flyingResponse) {
+        for (Map.Entry<Integer, FlyingFilter> entry : filterMap.entrySet()) {
+            boolean result = entry.getValue().doFilter(flyingRequest, flyingResponse);
+            if (!result) {
+                return false;
+            }
+        }
+        return true;
+    }
 }

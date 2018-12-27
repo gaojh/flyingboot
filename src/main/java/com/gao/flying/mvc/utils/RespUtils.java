@@ -1,7 +1,7 @@
 package com.gao.flying.mvc.utils;
 
 import com.alibaba.fastjson.JSONObject;
-import com.gao.flying.mvc.http.Request;
+import com.gao.flying.mvc.http.FlyingRequest;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.handler.codec.http.*;
@@ -12,25 +12,25 @@ import io.netty.handler.codec.http.*;
  */
 public class RespUtils {
 
-    public static void sendResp(Request request, Object resp) {
+    public static void sendResp(FlyingRequest flyingRequest, Object resp) {
         HttpResponse objToFlush = buildResponse(resp);
-        if (HttpUtil.isKeepAlive(request.httpRequest())) {
-            request.ctx().writeAndFlush(objToFlush);
+        if (HttpUtil.isKeepAlive(flyingRequest.httpRequest())) {
+            flyingRequest.ctx().writeAndFlush(objToFlush);
         } else {
-            request.ctx().writeAndFlush(objToFlush).addListener(ChannelFutureListener.CLOSE);
+            flyingRequest.ctx().writeAndFlush(objToFlush).addListener(ChannelFutureListener.CLOSE);
         }
     }
 
-    public static void sendError(Request request, String msg, HttpResponseStatus status) {
+    public static void sendError(FlyingRequest flyingRequest, String msg, HttpResponseStatus status) {
         JSONObject json = new JSONObject(true);
         json.put("success", false);
         json.put("code", status.toString());
         json.put("msg", msg);
         HttpResponse objToFlush = buildErrorResponse(json);
-        if (HttpUtil.isKeepAlive(request.httpRequest())) {
-            request.ctx().writeAndFlush(objToFlush);
+        if (HttpUtil.isKeepAlive(flyingRequest.httpRequest())) {
+            flyingRequest.ctx().writeAndFlush(objToFlush);
         } else {
-            request.ctx().writeAndFlush(objToFlush).addListener(ChannelFutureListener.CLOSE);
+            flyingRequest.ctx().writeAndFlush(objToFlush).addListener(ChannelFutureListener.CLOSE);
         }
     }
 

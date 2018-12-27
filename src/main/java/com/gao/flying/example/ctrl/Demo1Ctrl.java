@@ -1,14 +1,14 @@
 package com.gao.flying.example.ctrl;
 
 import cn.hutool.json.JSONUtil;
+import com.alibaba.fastjson.JSONObject;
 import com.gao.flying.example.service.Service1;
 import com.gao.flying.example.service.Service2;
 import com.gao.flying.ioc.annotation.Inject;
 import com.gao.flying.ioc.annotation.Value;
-import com.gao.flying.mvc.annotation.Ctrl;
-import com.gao.flying.mvc.annotation.RequestBody;
-import com.gao.flying.mvc.annotation.RequestParam;
-import com.gao.flying.mvc.annotation.Route;
+import com.gao.flying.mvc.annotation.*;
+import com.gao.flying.mvc.http.FlyingRequest;
+import com.gao.flying.mvc.utils.PathMatcher;
 
 /**
  * @author 高建华
@@ -34,8 +34,17 @@ public class Demo1Ctrl {
         return service1.m1(name) + "-" + pass + ":" + port;
     }
 
-    @Route("/user")
-    public String user(@RequestBody User user){
+    @Route(value = "/user")
+    public String user(@RequestBody User user) {
         return JSONUtil.toJsonStr(user);
+    }
+
+    @Route("/{url}")
+    public String test1(@PathParam String url, FlyingRequest flyingRequest) {
+        System.out.println(url);
+        return url;
+    }
+
+    public static void main(String[] args) {
     }
 }

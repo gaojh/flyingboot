@@ -11,11 +11,12 @@ import java.lang.reflect.Method;
  */
 @Data
 @AllArgsConstructor
-public class Route {
+public class FlyingRoute {
     /**
      * controller的instance
      */
     private Class<?> type;
     private Object object;
     private Method method;
+    private String urlMapping;
 }

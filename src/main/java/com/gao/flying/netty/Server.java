@@ -1,6 +1,7 @@
 package com.gao.flying.netty;
 
 import cn.hutool.core.thread.NamedThreadFactory;
+import cn.hutool.core.thread.ThreadUtil;
 import cn.hutool.log.Log;
 import cn.hutool.log.LogFactory;
 import com.gao.flying.context.ServerContext;
@@ -35,8 +36,8 @@ public class Server {
 
     public Server(ServerContext serverContext) {
         this.serverContext = serverContext;
-        Integer bossSize = Integer.parseInt(System.getProperty("netty.boss.size", "2"));
-        Integer workerSize = Integer.parseInt(System.getProperty("netty.worker.size", "4"));
+        int bossSize = Integer.parseInt(System.getProperty("netty.boss.size", "2"));
+        int workerSize = Integer.parseInt(System.getProperty("netty.worker.size", "4"));
         boss = new NioEventLoopGroup(bossSize, new NamedThreadFactory("NettyServerBoss", true));
         worker = new NioEventLoopGroup(workerSize, new NamedThreadFactory("NettyServerWorker", true));
         bootstrap = new ServerBootstrap();
@@ -72,7 +73,6 @@ public class Server {
 
         ChannelFuture channelFuture = bootstrap.bind(Integer.parseInt(port)).sync();
         log.info("启动成功，端口：{}", port);
-
         Channel channel = channelFuture.channel();
         channel.closeFuture().addListener(future -> log.info("停止服务成功，端口：{}", port)).sync();
         // 监听服务器关闭监听

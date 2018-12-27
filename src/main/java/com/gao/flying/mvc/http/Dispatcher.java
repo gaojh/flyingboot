@@ -11,9 +11,11 @@ import cn.hutool.log.level.Level;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.gao.flying.context.ServerContext;
+import com.gao.flying.mvc.annotation.PathParam;
 import com.gao.flying.mvc.annotation.RequestBody;
 import com.gao.flying.mvc.annotation.RequestParam;
 import com.gao.flying.mvc.utils.ClassUtils;
+import com.gao.flying.mvc.utils.PathMatcher;
 import com.gao.flying.mvc.utils.RespUtils;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.*;
@@ -28,6 +30,7 @@ import java.lang.reflect.Parameter;
 import java.lang.reflect.Type;
 import java.nio.charset.Charset;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -35,205 +38,195 @@ import java.util.concurrent.CompletableFuture;
  * @date 2018/6/22 下午11:06
  */
 public enum Dispatcher {
+    /**
+     *
+     */
     me;
     private Cache<String, byte[]> cache = CacheUtil.newLFUCache(1000);
-    private static final String IGNORE = "^.+\\.(html|bmp|jsp|png|gif|jpg|js|css|jspx|jpeg|swf|ico|json|woff2|woff|ttf|svg)$";
+    private static final String IGNORE = "^.+\\.(html|bmp|jsp|png|gif|jpg|js|css|jspx|jpeg|swf|ico|json|woff2|woff|ttf|svg|woff)$";
     private static final Log log = LogFactory.get();
 
-    public void doDispathcer(ServerContext serverContext, Request request, Response response) {
+    public void doDispathcer(ServerContext serverContext, FlyingRequest flyingRequest, FlyingResponse flyingResponse) {
         //先判断是否是静态资源，不过滤
-        HttpMethod httpMethod = request.method();
+        HttpMethod httpMethod = flyingRequest.method();
 
-        if (httpMethod.equals(HttpMethod.GET) && (isStaticResource(request.url()) || "/".equals(request.url()))) {
-            HttpResponse resp = getStaticResource(request.httpRequest(), request.url());
-            request.ctx().writeAndFlush(resp);
+        if (httpMethod.equals(HttpMethod.GET) && (isStaticResource(flyingRequest.url()) || "/".equals(flyingRequest.url()))) {
+            HttpResponse resp = getStaticResource(flyingRequest.httpRequest(), flyingRequest.url());
+            flyingRequest.ctx().writeAndFlush(resp);
             return;
         }
 
-        //再判断是否是配置了Controller
-        if (serverContext.getRoute(request.url()) == null) {
-            RespUtils.sendError(request, "请求无法响应：" + request.uri(), HttpResponseStatus.BAD_REQUEST);
-            return;
-        }
-
-        CompletableFuture<Response> future = null;
+        CompletableFuture<FlyingResponse> future = null;
         if (httpMethod.equals(HttpMethod.GET)) {
             try {
-                future = doGet(serverContext, request, response);
+                future = doGet(serverContext, flyingRequest, flyingResponse);
             } catch (Exception e) {
                 e.printStackTrace();
                 log.log(Level.ERROR, e, "调用Get方法出现异常");
             }
         } else if (httpMethod.equals(HttpMethod.POST)) {
             try {
-                future = doPost(serverContext, request, response);
+                future = doPost(serverContext, flyingRequest, flyingResponse);
             } catch (Exception e) {
                 log.log(Level.ERROR, e, "调用Post方法出现异常");
             }
         } else {
-            RespUtils.sendError(request, "不支持该method", HttpResponseStatus.BAD_REQUEST);
+            RespUtils.sendError(flyingRequest, "不支持该method", HttpResponseStatus.BAD_REQUEST);
         }
 
         if (future != null) {
             future.thenApply(resp -> {
                 try {
+
                     if (resp.success()) {
-                        RespUtils.sendResp(request, resp.data());
+                        RespUtils.sendResp(flyingRequest, resp.data());
                     } else {
-                        RespUtils.sendError(request, response.exception().getMessage(), HttpResponseStatus.INTERNAL_SERVER_ERROR);
+                        RespUtils.sendError(flyingRequest, resp.msg(), HttpResponseStatus.INTERNAL_SERVER_ERROR);
                     }
 
                 } catch (Exception ex) {
                     ex.printStackTrace();
-                    RespUtils.sendError(request, ex.getMessage(), HttpResponseStatus.INTERNAL_SERVER_ERROR);
+                    RespUtils.sendError(flyingRequest, ex.getMessage(), HttpResponseStatus.INTERNAL_SERVER_ERROR);
                 } finally {
-                    ReferenceCountUtil.release(request.httpRequest());
+                    ReferenceCountUtil.release(flyingRequest.httpRequest());
                 }
                 return resp;
             }).exceptionally(ex -> {
                 try {
                     ex.printStackTrace();
-                    RespUtils.sendError(request, ex.getMessage(), HttpResponseStatus.INTERNAL_SERVER_ERROR);
-                    return response;
+                    RespUtils.sendError(flyingRequest, ex.getMessage(), HttpResponseStatus.INTERNAL_SERVER_ERROR);
+                    return flyingResponse;
                 } finally {
-                    ReferenceCountUtil.release(request.httpRequest());
+                    ReferenceCountUtil.release(flyingRequest.httpRequest());
                 }
             });
         } else {
-            ReferenceCountUtil.release(request.httpRequest());
-            RespUtils.sendError(request, "系统内部错误", HttpResponseStatus.INTERNAL_SERVER_ERROR);
+            ReferenceCountUtil.release(flyingRequest.httpRequest());
+            RespUtils.sendError(flyingRequest, "系统内部错误", HttpResponseStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
-    private CompletableFuture<Response> doGet(ServerContext serverContext, Request request, Response response) {
-        Route route = serverContext.getRoute(request.url());
-        Method method = route.getMethod();
+    private CompletableFuture<FlyingResponse> doGet(ServerContext serverContext, FlyingRequest flyingRequest, FlyingResponse flyingResponse) {
+        FlyingRoute flyingRoute = serverContext.fetchGetRoute(flyingRequest.url());
+        if (flyingRoute == null) {
+            return CompletableFuture.completedFuture(DefaultFlyingResponse.buildResponse().success(false).msg("未找到对应的处理器"));
+        }
+        Method method = flyingRoute.getMethod();
         Parameter[] params = method.getParameters();
         String[] parameterNames = ClassUtils.getMethodParamNames(method);
 
         Object[] values = new Object[params.length];
-        for (int i = 0; i < params.length; i++) {
-            Parameter parameter = params[i];
-            RequestParam requestParam = parameter.getAnnotation(RequestParam.class);
-            if (requestParam != null) {
-                String name = StringUtils.isBlank(requestParam.value()) ? parameterNames[i] : requestParam.value();
-                List<String> value = request.parameters().get(name);
-                if (value == null) {
-                    return CompletableFuture.completedFuture(response.success(false).exception(new IllegalArgumentException("缺少参数名为" + name + "的值！")));
-                }
-                values[i] = getRealValue(parameter, value);
-            } else if ("com.gao.flying.mvc.http.Request".equals(parameter.getType().getName())) {
-                values[i] = request;
-            } else if ("com.gao.flying.mvc.http.Response".equals(parameter.getType().getName())) {
-                values[i] = response;
-            } else {
-                values[i] = "null";
-            }
-        }
+        setParamsValue(flyingRequest, flyingResponse, flyingRoute, params, parameterNames, values);
 
-        return invoke(serverContext, response, route, method, values);
+        return invoke(serverContext, flyingResponse, flyingRoute, method, values);
 
     }
 
-    private CompletableFuture<Response> doPost(ServerContext serverContext, Request request, Response response) {
-        Route route = serverContext.getRoute(request.url());
-        Method method = route.getMethod();
+    private void setParamsValue(FlyingRequest flyingRequest, FlyingResponse flyingResponse, FlyingRoute flyingRoute, Parameter[] params, String[] parameterNames, Object[] values) {
+        for (int i = 0; i < params.length; i++) {
+            Parameter parameter = params[i];
+            RequestParam requestParam = parameter.getAnnotation(RequestParam.class);
+            PathParam pathParam = parameter.getAnnotation(PathParam.class);
+            setValue(flyingRequest, flyingResponse, flyingRoute, parameterNames, values, i, parameter, requestParam, pathParam);
+        }
+    }
+
+    private void setValue(FlyingRequest flyingRequest, FlyingResponse flyingResponse, FlyingRoute flyingRoute, String[] parameterNames, Object[] values, int i, Parameter parameter, RequestParam requestParam, PathParam pathParam) {
+        if (requestParam != null) {
+            String name = StringUtils.isBlank(requestParam.value()) ? parameterNames[i] : requestParam.value();
+            List<String> value = flyingRequest.parameters().get(name);
+            if (value == null) {
+                log.info("缺少参数名为{}的值！设为null！", name);
+            } else {
+                values[i] = getRealValue(parameter, value);
+            }
+        } else if (parameter.getType().isAssignableFrom(FlyingRequest.class)) {
+            values[i] = flyingRequest;
+        } else if (parameter.getType().isAssignableFrom(FlyingResponse.class)) {
+            values[i] = flyingResponse;
+        } else if (pathParam != null) {
+            Map<String, String> map = PathMatcher.me.extractUriTemplateVariables(flyingRoute.getUrlMapping(), flyingRequest.url());
+            values[i] = Convert.convert(parameter.getType(), map.get(parameterNames[i]));
+        } else {
+            values[i] = "null";
+        }
+    }
+
+    private CompletableFuture<FlyingResponse> doPost(ServerContext serverContext, FlyingRequest flyingRequest, FlyingResponse flyingResponse) {
+        FlyingRoute flyingRoute = serverContext.fetchPostRoute(flyingRequest.url());
+        if (flyingRoute == null) {
+            return CompletableFuture.completedFuture(DefaultFlyingResponse.buildResponse().success(false).msg("未找到对应的处理器"));
+        }
+        Method method = flyingRoute.getMethod();
         Parameter[] params = method.getParameters();
         Type[] types = method.getGenericParameterTypes();
-        Object values[] = new Object[params.length];
+        Object[] values = new Object[params.length];
         String[] parameterNames = ClassUtils.getMethodParamNames(method);
 
-        if (request.isJsonRequest()) {
+        if (flyingRequest.isJsonRequest()) {
             for (int i = 0; i < params.length; i++) {
                 Parameter parameter = params[i];
                 RequestBody requestBody = parameter.getAnnotation(RequestBody.class);
                 RequestParam requestParam = parameter.getAnnotation(RequestParam.class);
+                PathParam pathParam = parameter.getAnnotation(PathParam.class);
                 if (requestBody != null) {
                     //json转换为此对象
                     Type type = types[i];
-                    if (request.body() == null) {
-                        return CompletableFuture.completedFuture(response.success(false).exception(new RuntimeException(type.getTypeName() + "入参为空！")));
+                    if (flyingRequest.body() == null) {
+                        return CompletableFuture.completedFuture(flyingResponse.success(false).exception(new RuntimeException(type.getTypeName() + "入参为空！")));
                     }
 
                     if (StringUtils.contains(type.getTypeName(), "<")) {
-                        if (JSONUtil.isJsonArray(request.body())) {
+                        if (JSONUtil.isJsonArray(flyingRequest.body())) {
                             try {
-                                values[i] = JSONArray.parseArray(request.body(), type.getClass());
+                                values[i] = JSONArray.parseArray(flyingRequest.body(), type.getClass());
                             } catch (Exception e) {
-                                return CompletableFuture.completedFuture(response.success(false).exception(e));
+                                return CompletableFuture.completedFuture(flyingResponse.success(false).exception(e));
                             }
                         } else {
                             try {
-                                values[i] = JSON.parseObject(request.body(), type);
+                                values[i] = JSON.parseObject(flyingRequest.body(), type);
                             } catch (Exception e) {
-                                return CompletableFuture.completedFuture(response.success(false).exception(e));
+                                return CompletableFuture.completedFuture(flyingResponse.success(false).exception(e));
                             }
                         }
                     } else {
-                        if (JSONUtil.isJsonArray(request.body())) {
+                        if (JSONUtil.isJsonArray(flyingRequest.body())) {
                             try {
-                                values[i] = JSONArray.parseArray(request.body(), parameter.getType());
+                                values[i] = JSONArray.parseArray(flyingRequest.body(), parameter.getType());
                             } catch (Exception e) {
-                                return CompletableFuture.completedFuture(response.success(false).exception(e));
+                                return CompletableFuture.completedFuture(flyingResponse.success(false).exception(e));
                             }
                         } else {
                             try {
-                                values[i] = JSONArray.parseObject(request.body(), parameter.getType());
+                                values[i] = JSONArray.parseObject(flyingRequest.body(), parameter.getType());
                             } catch (Exception e) {
-                                return CompletableFuture.completedFuture(response.success(false).exception(e));
+                                return CompletableFuture.completedFuture(flyingResponse.success(false).exception(e));
                             }
                         }
                     }
-                } else if (requestParam != null) {
-                    String name = StringUtils.isBlank(requestParam.value()) ? parameterNames[i] : requestParam.value();
-                    List<String> value = request.parameters().get(name);
-                    if (value == null) {
-                        return CompletableFuture.completedFuture(response.success(false).exception(new IllegalArgumentException("缺少参数名为" + name + "的值！")));
-                    }
-                    values[i] = getRealValue(parameter, value);
-                } else if ("com.gao.flying.mvc.http.Request".equals(parameter.getType().getName())) {
-                    values[i] = request;
-                } else if ("com.gao.flying.mvc.http.Response".equals(parameter.getType().getName())) {
-                    values[i] = response;
                 } else {
-                    values[i] = "null";
+                    setValue(flyingRequest, flyingResponse, flyingRoute, parameterNames, values, i, parameter, requestParam, pathParam);
                 }
             }
         } else {
-            for (int i = 0; i < params.length; i++) {
-                Parameter parameter = params[i];
-                RequestParam requestParam = parameter.getAnnotation(RequestParam.class);
-                if (requestParam != null) {
-                    String name = StringUtils.isBlank(requestParam.value()) ? parameterNames[i] : requestParam.value();
-                    List<String> value = request.parameters().get(name);
-                    if (value == null) {
-                        return CompletableFuture.completedFuture(response.success(false).exception(new IllegalArgumentException("缺少参数名为" + name + "的值！")));
-                    }
-                    values[i] = getRealValue(parameter, value);
-                } else if ("com.gao.flying.mvc.http.Request".equals(parameter.getType().getName())) {
-                    values[i] = request;
-                } else if ("com.gao.flying.mvc.http.Response".equals(parameter.getType().getName())) {
-                    values[i] = response;
-                } else {
-                    values[i] = "null";
-                }
-            }
+            setParamsValue(flyingRequest, flyingResponse, flyingRoute, params, parameterNames, values);
         }
 
-        return invoke(serverContext, response, route, method, values);
+        return invoke(serverContext, flyingResponse, flyingRoute, method, values);
     }
 
-    private CompletableFuture<Response> invoke(ServerContext serverContext, Response response, Route config, Method method, Object[] values) {
+    private CompletableFuture<FlyingResponse> invoke(ServerContext serverContext, FlyingResponse flyingResponse, FlyingRoute config, Method method, Object[] values) {
         return CompletableFuture.supplyAsync(() -> {
             try {
                 Object result = method.invoke(config.getObject(), values);
-                response.data(result);
+                flyingResponse.data(result);
             } catch (Exception e) {
                 e.printStackTrace();
-                response.exception(e).msg(e.getMessage()).success(false);
-                return response;
+                flyingResponse.exception(e).msg(e.getCause().getMessage()).success(false);
+                return flyingResponse;
             }
-            return response;
+            return flyingResponse;
         }, serverContext.getExecutorService());
     }
 

@@ -1,6 +1,5 @@
 package com.gao.flying.netty.handler;
 
-import cn.hutool.core.thread.ThreadUtil;
 import com.gao.flying.context.ServerContext;
 import com.gao.flying.mvc.http.*;
 import com.gao.flying.mvc.utils.RespUtils;
@@ -27,12 +26,17 @@ public class HttpServerHandler extends ChannelInboundHandlerAdapter {
             return;
         }
 
-        Request request = new DefaultRequest((FullHttpRequest) msg, ctx);
-        Response response = DefaultResponse.buildSuccess();
-        try {
-            Dispatcher.me.doDispathcer(serverContext, request, response);
-        } catch (Exception e) {
-            RespUtils.sendError(request, e.getMessage(), HttpResponseStatus.BAD_REQUEST);
+        FlyingRequest flyingRequest = new DefaultFlyingRequest((FullHttpRequest) msg, ctx);
+        FlyingResponse flyingResponse = DefaultFlyingResponse.buildSuccess();
+
+        if(serverContext.executeFilter(flyingRequest,flyingResponse)) {
+            try {
+                Dispatcher.me.doDispathcer(serverContext, flyingRequest, flyingResponse);
+            } catch (Exception e) {
+                RespUtils.sendError(flyingRequest, e.getMessage(), HttpResponseStatus.BAD_REQUEST);
+            }
+        }else{
+            RespUtils.sendResp(flyingRequest,flyingResponse.data());
         }
 
     }

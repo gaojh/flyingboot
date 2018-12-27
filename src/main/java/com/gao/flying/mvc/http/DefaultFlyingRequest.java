@@ -19,7 +19,7 @@ import java.util.*;
  * @author 高建华
  * @date 2018/6/22 下午11:22
  */
-public class DefaultRequest implements Request {
+public class DefaultFlyingRequest implements FlyingRequest {
 
     private static final HttpDataFactory HTTP_DATA_FACTORY = new DefaultHttpDataFactory(DefaultHttpDataFactory.MINSIZE);
 
@@ -32,7 +32,7 @@ public class DefaultRequest implements Request {
     private boolean keepAlive;
     private Map<String, FileItem> fileItems = new HashMap<>();
 
-    public DefaultRequest(FullHttpRequest httpRequest, ChannelHandlerContext ctx) {
+    public DefaultFlyingRequest(FullHttpRequest httpRequest, ChannelHandlerContext ctx) {
         this.httpRequest = httpRequest;
         this.ctx = ctx;
         this.keepAlive = HttpUtil.isKeepAlive(httpRequest);

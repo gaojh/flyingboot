@@ -4,25 +4,25 @@ package com.gao.flying.mvc.http;
  * @author 高建华
  * @date 2018/6/24 下午8:26
  */
-public class DefaultResponse implements Response {
+public class DefaultFlyingResponse implements FlyingResponse {
 
     private boolean success;
     private String msg;
     private Object data;
     private Exception exception;
 
-    public static Response buildResponse() {
-        return new DefaultResponse();
+    public static FlyingResponse buildResponse() {
+        return new DefaultFlyingResponse();
     }
 
-    public static Response buildSuccess() {
-        DefaultResponse response = new DefaultResponse();
+    public static FlyingResponse buildSuccess() {
+        DefaultFlyingResponse response = new DefaultFlyingResponse();
         response.success = true;
         return response;
     }
 
     @Override
-    public Response success(boolean res) {
+    public FlyingResponse success(boolean res) {
         this.success = res;
         return this;
     }
@@ -33,7 +33,7 @@ public class DefaultResponse implements Response {
     }
 
     @Override
-    public Response msg(String msg) {
+    public FlyingResponse msg(String msg) {
         this.msg = msg;
         return this;
     }
@@ -44,7 +44,7 @@ public class DefaultResponse implements Response {
     }
 
     @Override
-    public Response data(Object data) {
+    public FlyingResponse data(Object data) {
         this.data = data;
         return this;
     }
@@ -55,7 +55,7 @@ public class DefaultResponse implements Response {
     }
 
     @Override
-    public Response exception(Exception e) {
+    public FlyingResponse exception(Exception e) {
         this.exception = e;
         return this;
     }

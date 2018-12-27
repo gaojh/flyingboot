@@ -13,7 +13,7 @@ import java.util.Map;
  * @author 高建华
  * @date 2018/7/5 上午11:18
  */
-public interface Request {
+public interface FlyingRequest {
 
     String host();
 
