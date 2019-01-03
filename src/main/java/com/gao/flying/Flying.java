@@ -1,6 +1,5 @@
 package com.gao.flying;
 
-import cn.hutool.core.thread.ThreadUtil;
 import cn.hutool.setting.dialect.Props;
 import com.gao.flying.netty.Server;
 import com.gao.flying.context.ServerContext;

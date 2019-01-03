@@ -7,7 +7,8 @@ import com.gao.flying.mvc.http.FlyingResponse;
  * @author 高建华
  * @date 2018-12-15 16:10
  */
-public interface FlyingFilter {
+public interface Filter {
 
-    boolean doFilter(FlyingRequest flyingRequest, FlyingResponse flyingResponse);
+    void doFilter(FlyingRequest flyingRequest, FlyingResponse flyingResponse,FilterChain filterChain);
+
 }

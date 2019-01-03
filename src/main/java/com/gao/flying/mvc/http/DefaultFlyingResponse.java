@@ -1,24 +1,31 @@
 package com.gao.flying.mvc.http;
 
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.http.HttpResponseStatus;
+
 /**
  * @author 高建华
  * @date 2018/6/24 下午8:26
  */
 public class DefaultFlyingResponse implements FlyingResponse {
 
+    private ChannelHandlerContext ctx;
     private boolean success;
     private String msg;
     private Object data;
-    private Exception exception;
+    private HttpResponseStatus httpResponseStatus;
 
-    public static FlyingResponse buildResponse() {
-        return new DefaultFlyingResponse();
+    public static FlyingResponse buildSuccess(ChannelHandlerContext ctx) {
+        DefaultFlyingResponse response = new DefaultFlyingResponse();
+        response.ctx = ctx;
+        response.success = true;
+        response.httpResponseStatus = HttpResponseStatus.OK;
+        return response;
     }
 
-    public static FlyingResponse buildSuccess() {
-        DefaultFlyingResponse response = new DefaultFlyingResponse();
-        response.success = true;
-        return response;
+    @Override
+    public ChannelHandlerContext ctx() {
+        return ctx;
     }
 
     @Override
@@ -55,13 +62,14 @@ public class DefaultFlyingResponse implements FlyingResponse {
     }
 
     @Override
-    public FlyingResponse exception(Exception e) {
-        this.exception = e;
+    public FlyingResponse httpResponseStatus(HttpResponseStatus httpResponseStatus) {
+        this.httpResponseStatus = httpResponseStatus;
         return this;
     }
 
     @Override
-    public Exception exception() {
-        return exception;
+    public HttpResponseStatus httpResponseStatus() {
+        return this.httpResponseStatus;
     }
+
 }

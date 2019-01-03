@@ -1,10 +1,15 @@
 package com.gao.flying.mvc.http;
 
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.http.HttpResponseStatus;
+
 /**
  * @author 高建华
  * @date 2018/7/5 上午11:18
  */
 public interface FlyingResponse {
+
+    ChannelHandlerContext ctx();
 
     FlyingResponse success(boolean res);
 
@@ -18,7 +23,7 @@ public interface FlyingResponse {
 
     Object data();
 
-    FlyingResponse exception(Exception e);
+    FlyingResponse httpResponseStatus(HttpResponseStatus httpResponseStatus);
 
-    Exception exception();
+    HttpResponseStatus httpResponseStatus();
 }

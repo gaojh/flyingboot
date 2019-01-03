@@ -7,6 +7,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.util.ReferenceCountUtil;
 
 /**
  * @author 高建华
@@ -27,18 +28,16 @@ public class HttpServerHandler extends ChannelInboundHandlerAdapter {
         }
 
         FlyingRequest flyingRequest = new DefaultFlyingRequest((FullHttpRequest) msg, ctx);
-        FlyingResponse flyingResponse = DefaultFlyingResponse.buildSuccess();
+        FlyingResponse flyingResponse = DefaultFlyingResponse.buildSuccess(ctx);
 
-        if(serverContext.executeFilter(flyingRequest,flyingResponse)) {
-            try {
-                Dispatcher.me.doDispathcer(serverContext, flyingRequest, flyingResponse);
-            } catch (Exception e) {
-                RespUtils.sendError(flyingRequest, e.getMessage(), HttpResponseStatus.BAD_REQUEST);
-            }
-        }else{
-            RespUtils.sendResp(flyingRequest,flyingResponse.data());
+        try {
+            Dispatcher.me.execute(serverContext, flyingRequest, flyingResponse);
+        } catch (Exception e) {
+            flyingResponse.success(false).msg("服务器内部调用异常：" + e.getMessage()).httpResponseStatus(HttpResponseStatus.INTERNAL_SERVER_ERROR);
+            RespUtils.sendResponse(flyingResponse);
+        } finally {
+            ReferenceCountUtil.release(flyingRequest.httpRequest());
         }
-
     }
 
 

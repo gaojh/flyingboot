@@ -1,7 +1,9 @@
 package com.gao.flying.example.ctrl;
 
 import cn.hutool.json.JSONUtil;
+import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
+import com.alibaba.fastjson.TypeReference;
 import com.gao.flying.example.service.Service1;
 import com.gao.flying.example.service.Service2;
 import com.gao.flying.ioc.annotation.Inject;
@@ -9,6 +11,10 @@ import com.gao.flying.ioc.annotation.Value;
 import com.gao.flying.mvc.annotation.*;
 import com.gao.flying.mvc.http.FlyingRequest;
 import com.gao.flying.mvc.utils.PathMatcher;
+
+import java.lang.reflect.ParameterizedType;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * @author 高建华
@@ -35,8 +41,18 @@ public class Demo1Ctrl {
     }
 
     @Route(value = "/user")
-    public String user(@RequestBody User user) {
-        return JSONUtil.toJsonStr(user);
+    public String user(@RequestBody List<User> users) {
+        return JSONUtil.toJsonStr(users);
+    }
+
+    @Route(value = "/user2")
+    public String user2(@RequestBody List users) {
+        return JSONUtil.toJsonStr(users);
+    }
+
+    @Route(value = "/user3")
+    public String user3(@RequestBody CommonUser<User> commonUser) {
+        return JSONUtil.toJsonStr(commonUser);
     }
 
     @Route("/{url}")
@@ -46,5 +62,7 @@ public class Demo1Ctrl {
     }
 
     public static void main(String[] args) {
+        List<User> list = new ArrayList<>();
+        User user = new User();
     }
 }

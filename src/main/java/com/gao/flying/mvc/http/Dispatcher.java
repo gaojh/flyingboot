@@ -4,22 +4,20 @@ import cn.hutool.cache.Cache;
 import cn.hutool.cache.CacheUtil;
 import cn.hutool.core.convert.Convert;
 import cn.hutool.core.util.ReUtil;
-import cn.hutool.json.JSONUtil;
 import cn.hutool.log.Log;
 import cn.hutool.log.LogFactory;
-import cn.hutool.log.level.Level;
 import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONArray;
 import com.gao.flying.context.ServerContext;
 import com.gao.flying.mvc.annotation.PathParam;
 import com.gao.flying.mvc.annotation.RequestBody;
 import com.gao.flying.mvc.annotation.RequestParam;
+import com.gao.flying.mvc.filter.FilterChainImpl;
+import com.gao.flying.mvc.filter.FilterChain;
 import com.gao.flying.mvc.utils.ClassUtils;
 import com.gao.flying.mvc.utils.PathMatcher;
 import com.gao.flying.mvc.utils.RespUtils;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.*;
-import io.netty.util.ReferenceCountUtil;
 import org.apache.commons.lang3.StringUtils;
 
 import java.io.ByteArrayOutputStream;
@@ -29,6 +27,7 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.lang.reflect.Type;
 import java.nio.charset.Charset;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -46,70 +45,56 @@ public enum Dispatcher {
     private static final String IGNORE = "^.+\\.(html|bmp|jsp|png|gif|jpg|js|css|jspx|jpeg|swf|ico|json|woff2|woff|ttf|svg|woff)$";
     private static final Log log = LogFactory.get();
 
-    public void doDispathcer(ServerContext serverContext, FlyingRequest flyingRequest, FlyingResponse flyingResponse) {
-        //先判断是否是静态资源，不过滤
-        HttpMethod httpMethod = flyingRequest.method();
+    public void execute(ServerContext serverContext, FlyingRequest flyingRequest, FlyingResponse flyingResponse) throws Exception {
 
-        if (httpMethod.equals(HttpMethod.GET) && (isStaticResource(flyingRequest.url()) || "/".equals(flyingRequest.url()))) {
-            HttpResponse resp = getStaticResource(flyingRequest.httpRequest(), flyingRequest.url());
-            flyingRequest.ctx().writeAndFlush(resp);
+        FilterChain filterChain = new FilterChainImpl() {
+            @Override
+            public void execute(FlyingRequest flyingRequest, FlyingResponse flyingResponse) {
+                HttpMethod httpMethod = flyingRequest.method();
+                CompletableFuture<FlyingResponse> future;
+                if (httpMethod.equals(HttpMethod.GET)) {
+                    //是否是静态资源
+                    if (isStaticResource(flyingRequest.url()) || "/".equals(flyingRequest.url())) {
+                        FullHttpResponse resp = getStaticResource(flyingRequest.httpRequest(), flyingRequest.url());
+                        future = CompletableFuture.completedFuture(flyingResponse.success(true).data(resp));
+                    } else {
+                        future = doGet(serverContext, flyingRequest, flyingResponse);
+                    }
+
+                } else if (httpMethod.equals(HttpMethod.POST)) {
+                    future = doPost(serverContext, flyingRequest, flyingResponse);
+                } else {
+                    future = CompletableFuture.completedFuture(flyingResponse.success(false).msg("不支持该method").httpResponseStatus(HttpResponseStatus.BAD_REQUEST));
+                }
+
+                this.setResult(future);
+            }
+        };
+
+        filterChain.addFilters(serverContext.getFilters());
+
+        filterChain.doFilter(flyingRequest, flyingResponse);
+        CompletableFuture<FlyingResponse> future = filterChain.getResult();
+        if(future == null){
+            RespUtils.sendResponse(flyingResponse);
             return;
         }
 
-        CompletableFuture<FlyingResponse> future = null;
-        if (httpMethod.equals(HttpMethod.GET)) {
-            try {
-                future = doGet(serverContext, flyingRequest, flyingResponse);
-            } catch (Exception e) {
-                e.printStackTrace();
-                log.log(Level.ERROR, e, "调用Get方法出现异常");
-            }
-        } else if (httpMethod.equals(HttpMethod.POST)) {
-            try {
-                future = doPost(serverContext, flyingRequest, flyingResponse);
-            } catch (Exception e) {
-                log.log(Level.ERROR, e, "调用Post方法出现异常");
-            }
-        } else {
-            RespUtils.sendError(flyingRequest, "不支持该method", HttpResponseStatus.BAD_REQUEST);
-        }
+        future.thenApply(resp -> {
+            RespUtils.sendResponse(resp);
+            return resp;
+        }).exceptionally(ex -> {
+            log.error(ex);
+            RespUtils.sendResponse(flyingResponse.success(false).msg(ex.getMessage()).httpResponseStatus(HttpResponseStatus.INTERNAL_SERVER_ERROR));
+            return flyingResponse;
+        });
 
-        if (future != null) {
-            future.thenApply(resp -> {
-                try {
-
-                    if (resp.success()) {
-                        RespUtils.sendResp(flyingRequest, resp.data());
-                    } else {
-                        RespUtils.sendError(flyingRequest, resp.msg(), HttpResponseStatus.INTERNAL_SERVER_ERROR);
-                    }
-
-                } catch (Exception ex) {
-                    ex.printStackTrace();
-                    RespUtils.sendError(flyingRequest, ex.getMessage(), HttpResponseStatus.INTERNAL_SERVER_ERROR);
-                } finally {
-                    ReferenceCountUtil.release(flyingRequest.httpRequest());
-                }
-                return resp;
-            }).exceptionally(ex -> {
-                try {
-                    ex.printStackTrace();
-                    RespUtils.sendError(flyingRequest, ex.getMessage(), HttpResponseStatus.INTERNAL_SERVER_ERROR);
-                    return flyingResponse;
-                } finally {
-                    ReferenceCountUtil.release(flyingRequest.httpRequest());
-                }
-            });
-        } else {
-            ReferenceCountUtil.release(flyingRequest.httpRequest());
-            RespUtils.sendError(flyingRequest, "系统内部错误", HttpResponseStatus.INTERNAL_SERVER_ERROR);
-        }
     }
 
     private CompletableFuture<FlyingResponse> doGet(ServerContext serverContext, FlyingRequest flyingRequest, FlyingResponse flyingResponse) {
         FlyingRoute flyingRoute = serverContext.fetchGetRoute(flyingRequest.url());
         if (flyingRoute == null) {
-            return CompletableFuture.completedFuture(DefaultFlyingResponse.buildResponse().success(false).msg("未找到对应的处理器"));
+            return CompletableFuture.completedFuture(flyingResponse.success(false).msg("未找到对应的处理器").httpResponseStatus(HttpResponseStatus.BAD_REQUEST));
         }
         Method method = flyingRoute.getMethod();
         Parameter[] params = method.getParameters();
@@ -155,7 +140,7 @@ public enum Dispatcher {
     private CompletableFuture<FlyingResponse> doPost(ServerContext serverContext, FlyingRequest flyingRequest, FlyingResponse flyingResponse) {
         FlyingRoute flyingRoute = serverContext.fetchPostRoute(flyingRequest.url());
         if (flyingRoute == null) {
-            return CompletableFuture.completedFuture(DefaultFlyingResponse.buildResponse().success(false).msg("未找到对应的处理器"));
+            return CompletableFuture.completedFuture(flyingResponse.success(false).msg("未找到对应的处理器").httpResponseStatus(HttpResponseStatus.BAD_REQUEST));
         }
         Method method = flyingRoute.getMethod();
         Parameter[] params = method.getParameters();
@@ -173,36 +158,22 @@ public enum Dispatcher {
                     //json转换为此对象
                     Type type = types[i];
                     if (flyingRequest.body() == null) {
-                        return CompletableFuture.completedFuture(flyingResponse.success(false).exception(new RuntimeException(type.getTypeName() + "入参为空！")));
+                        return CompletableFuture.completedFuture(flyingResponse.success(false).msg("入参为空").httpResponseStatus(HttpResponseStatus.BAD_REQUEST));
                     }
 
                     if (StringUtils.contains(type.getTypeName(), "<")) {
-                        if (JSONUtil.isJsonArray(flyingRequest.body())) {
-                            try {
-                                values[i] = JSONArray.parseArray(flyingRequest.body(), type.getClass());
-                            } catch (Exception e) {
-                                return CompletableFuture.completedFuture(flyingResponse.success(false).exception(e));
-                            }
-                        } else {
-                            try {
-                                values[i] = JSON.parseObject(flyingRequest.body(), type);
-                            } catch (Exception e) {
-                                return CompletableFuture.completedFuture(flyingResponse.success(false).exception(e));
-                            }
+                        try {
+                            values[i] = JSON.parseObject(flyingRequest.body(), type);
+                        } catch (Exception e) {
+                            log.error(e);
+                            return CompletableFuture.completedFuture(flyingResponse.success(false).msg("参数转换出错：" + e.getMessage()).httpResponseStatus(HttpResponseStatus.BAD_REQUEST));
                         }
                     } else {
-                        if (JSONUtil.isJsonArray(flyingRequest.body())) {
-                            try {
-                                values[i] = JSONArray.parseArray(flyingRequest.body(), parameter.getType());
-                            } catch (Exception e) {
-                                return CompletableFuture.completedFuture(flyingResponse.success(false).exception(e));
-                            }
-                        } else {
-                            try {
-                                values[i] = JSONArray.parseObject(flyingRequest.body(), parameter.getType());
-                            } catch (Exception e) {
-                                return CompletableFuture.completedFuture(flyingResponse.success(false).exception(e));
-                            }
+                        try {
+                            values[i] = JSON.parseObject(flyingRequest.body(), parameter.getType());
+                        } catch (Exception e) {
+                            log.error(e);
+                            return CompletableFuture.completedFuture(flyingResponse.success(false).msg("参数转换出错：" + e.getMessage()).httpResponseStatus(HttpResponseStatus.BAD_REQUEST));
                         }
                     }
                 } else {
@@ -222,8 +193,8 @@ public enum Dispatcher {
                 Object result = method.invoke(config.getObject(), values);
                 flyingResponse.data(result);
             } catch (Exception e) {
-                e.printStackTrace();
-                flyingResponse.exception(e).msg(e.getCause().getMessage()).success(false);
+                log.error(e);
+                flyingResponse.msg(e.getCause().getMessage()).success(false);
                 return flyingResponse;
             }
             return flyingResponse;
@@ -236,7 +207,8 @@ public enum Dispatcher {
 
 
     private Object getRealValue(Parameter parameter, List<String> value) {
-        if (StringUtils.containsAny(parameter.getType().getSimpleName(), "List", "ArrayList", "LinkedList")) {
+        Class parameterType = parameter.getType();
+        if (Collection.class.isAssignableFrom(parameterType)) {
             return Convert.convert(parameter.getType(), value);
         } else {
             return Convert.convert(parameter.getType(), value.get(0));
@@ -244,7 +216,7 @@ public enum Dispatcher {
     }
 
 
-    private HttpResponse getStaticResource(FullHttpRequest request, String requestURI) {
+    private FullHttpResponse getStaticResource(FullHttpRequest request, String requestURI) {
         if (null == requestURI || requestURI.isEmpty() || "/".equals(requestURI)) {
             requestURI = "/index.html";
         }
