@@ -6,14 +6,14 @@ import cn.hutool.core.convert.Convert;
 import cn.hutool.core.util.ReUtil;
 import cn.hutool.log.Log;
 import cn.hutool.log.LogFactory;
-import com.alibaba.fastjson.JSON;
+import com.fasterxml.jackson.databind.JavaType;
 import com.gao.flying.context.ServerContext;
 import com.gao.flying.mvc.annotation.PathParam;
 import com.gao.flying.mvc.annotation.RequestBody;
 import com.gao.flying.mvc.annotation.RequestParam;
-import com.gao.flying.mvc.filter.FilterChainImpl;
-import com.gao.flying.mvc.filter.FilterChain;
+import com.gao.flying.mvc.interceptor.HandlerInterceptorChain;
 import com.gao.flying.mvc.utils.ClassUtils;
+import com.gao.flying.mvc.utils.JsonTools;
 import com.gao.flying.mvc.utils.PathMatcher;
 import com.gao.flying.mvc.utils.RespUtils;
 import io.netty.buffer.Unpooled;
@@ -45,49 +45,40 @@ public enum Dispatcher {
     private static final String IGNORE = "^.+\\.(html|bmp|jsp|png|gif|jpg|js|css|jspx|jpeg|swf|ico|json|woff2|woff|ttf|svg|woff)$";
     private static final Log log = LogFactory.get();
 
+
     public void execute(ServerContext serverContext, FlyingRequest flyingRequest, FlyingResponse flyingResponse) throws Exception {
 
-        FilterChain filterChain = new FilterChainImpl() {
-            @Override
-            public void execute(FlyingRequest flyingRequest, FlyingResponse flyingResponse) {
-                HttpMethod httpMethod = flyingRequest.method();
-                CompletableFuture<FlyingResponse> future;
-                if (httpMethod.equals(HttpMethod.GET)) {
-                    //是否是静态资源
-                    if (isStaticResource(flyingRequest.url()) || "/".equals(flyingRequest.url())) {
-                        FullHttpResponse resp = getStaticResource(flyingRequest.httpRequest(), flyingRequest.url());
-                        future = CompletableFuture.completedFuture(flyingResponse.success(true).data(resp));
-                    } else {
-                        future = doGet(serverContext, flyingRequest, flyingResponse);
-                    }
+        HandlerInterceptorChain interceptorChain = new HandlerInterceptorChain(serverContext.getInterceptors(flyingRequest.url()));
+        CompletableFuture<FlyingResponse> future;
 
-                } else if (httpMethod.equals(HttpMethod.POST)) {
-                    future = doPost(serverContext, flyingRequest, flyingResponse);
+        //拦截
+        if (interceptorChain.applyPreHandle(flyingRequest, flyingResponse)) {
+            HttpMethod httpMethod = flyingRequest.method();
+            if (httpMethod.equals(HttpMethod.GET)) {
+                //是否是静态资源
+                if (isStaticResource(flyingRequest.url()) || "/".equals(flyingRequest.url())) {
+                    FullHttpResponse resp = getStaticResource(flyingRequest.httpRequest(), flyingRequest.url());
+                    future = CompletableFuture.completedFuture(flyingResponse.success(true).data(resp));
                 } else {
-                    future = CompletableFuture.completedFuture(flyingResponse.success(false).msg("不支持该method").httpResponseStatus(HttpResponseStatus.BAD_REQUEST));
+                    future = doGet(serverContext, flyingRequest, flyingResponse);
                 }
-
-                this.setResult(future);
+            } else if (httpMethod.equals(HttpMethod.POST)) {
+                future = doPost(serverContext, flyingRequest, flyingResponse);
+            } else {
+                future = CompletableFuture.completedFuture(flyingResponse.success(false).msg("不支持该method").httpResponseStatus(HttpResponseStatus.BAD_REQUEST));
             }
-        };
-
-        filterChain.addFilters(serverContext.getFilters());
-
-        filterChain.doFilter(flyingRequest, flyingResponse);
-        CompletableFuture<FlyingResponse> future = filterChain.getResult();
-        if(future == null){
-            RespUtils.sendResponse(flyingResponse);
-            return;
+        } else {
+            future = CompletableFuture.completedFuture(flyingResponse.success(false).msg("已拦截").httpResponseStatus(HttpResponseStatus.OK));
         }
 
         future.thenApply(resp -> {
-            RespUtils.sendResponse(resp);
+            try {
+                interceptorChain.applyPostHandle(flyingRequest, resp);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
             return resp;
-        }).exceptionally(ex -> {
-            log.error(ex);
-            RespUtils.sendResponse(flyingResponse.success(false).msg(ex.getMessage()).httpResponseStatus(HttpResponseStatus.INTERNAL_SERVER_ERROR));
-            return flyingResponse;
-        });
+        }).thenAccept(RespUtils::sendResponse);
 
     }
 
@@ -160,22 +151,8 @@ public enum Dispatcher {
                     if (flyingRequest.body() == null) {
                         return CompletableFuture.completedFuture(flyingResponse.success(false).msg("入参为空").httpResponseStatus(HttpResponseStatus.BAD_REQUEST));
                     }
-
-                    if (StringUtils.contains(type.getTypeName(), "<")) {
-                        try {
-                            values[i] = JSON.parseObject(flyingRequest.body(), type);
-                        } catch (Exception e) {
-                            log.error(e);
-                            return CompletableFuture.completedFuture(flyingResponse.success(false).msg("参数转换出错：" + e.getMessage()).httpResponseStatus(HttpResponseStatus.BAD_REQUEST));
-                        }
-                    } else {
-                        try {
-                            values[i] = JSON.parseObject(flyingRequest.body(), parameter.getType());
-                        } catch (Exception e) {
-                            log.error(e);
-                            return CompletableFuture.completedFuture(flyingResponse.success(false).msg("参数转换出错：" + e.getMessage()).httpResponseStatus(HttpResponseStatus.BAD_REQUEST));
-                        }
-                    }
+                    JavaType javaType = JsonTools.DEFAULT.getMapper().getTypeFactory().constructType(type);
+                    values[i] = JsonTools.DEFAULT.fromJson(flyingRequest.body(), javaType);
                 } else {
                     setValue(flyingRequest, flyingResponse, flyingRoute, parameterNames, values, i, parameter, requestParam, pathParam);
                 }

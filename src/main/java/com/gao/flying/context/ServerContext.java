@@ -12,24 +12,21 @@ import com.gao.flying.ioc.annotation.Inject;
 import com.gao.flying.ioc.annotation.Value;
 import com.gao.flying.ioc.bean.BeanDefine;
 import com.gao.flying.mvc.ApplicationRunner;
-import com.gao.flying.mvc.annotation.Ctrl;
-import com.gao.flying.mvc.annotation.WebFilter;
-import com.gao.flying.mvc.annotation.Route;
-import com.gao.flying.mvc.annotation.Setup;
-import com.gao.flying.mvc.filter.Filter;
-import com.gao.flying.mvc.http.FlyingRequest;
-import com.gao.flying.mvc.http.FlyingResponse;
+import com.gao.flying.mvc.annotation.*;
 import com.gao.flying.mvc.http.FlyingRoute;
+import com.gao.flying.mvc.interceptor.HandlerInterceptor;
 import com.gao.flying.mvc.utils.PathMatcher;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.apache.commons.lang3.StringUtils;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.stream.Collectors;
 
 /**
  * @author 高建华
@@ -54,9 +51,8 @@ public class ServerContext {
     private ConcurrentHashMap<String, BeanDefine> beanDefineMap = new ConcurrentHashMap<>();
     private ConcurrentHashMap<String, BeanDefine> initBeanDefineMap = new ConcurrentHashMap<>();
     private TreeMap<Integer, ApplicationRunner> setupMap = new TreeMap<>();
-    private TreeMap<Integer, Filter> filterMap = new TreeMap<>();
+    private TreeMap<String, HandlerInterceptor> interceptorMap = new TreeMap<>();
 
-    @Getter
     private ExecutorService executorService;
 
 
@@ -73,13 +69,17 @@ public class ServerContext {
 
         try {
             initBeans();
-            initWebFilter();
+            initInterceptor();
             initController();
             initSetup();
         } catch (Exception e) {
             e.printStackTrace();
         }
 
+    }
+
+    public ExecutorService getExecutorService() {
+        return executorService;
     }
 
     public FlyingRoute fetchGetRoute(String url) {
@@ -180,15 +180,17 @@ public class ServerContext {
 
     }
 
-
-    private void initWebFilter() throws Exception {
-        log.info("开始初始化WebFilter");
-        Set<Class<?>> filters = ClassUtil.scanPackageByAnnotation(props.getStr(FlyingConst.BASE_PACKAGE_STRING), WebFilter.class);
-        for (Class<?> clazz : filters) {
-
-            WebFilter webFilter = clazz.getAnnotation(WebFilter.class);
-            Filter obj = (Filter) clazz.newInstance();
-            filterMap.put(webFilter.order(), obj);
+    private void initInterceptor() throws Exception {
+        log.info("开始初始化Interceptor");
+        Set<Class<?>> interceptors = ClassUtil.scanPackageByAnnotation(props.getStr(FlyingConst.BASE_PACKAGE_STRING), Interceptor.class);
+        for (Class<?> clazz : interceptors) {
+            Interceptor interceptor = clazz.getAnnotation(Interceptor.class);
+            HandlerInterceptor obj = (HandlerInterceptor) clazz.newInstance();
+            for (String path : interceptor.pathPatterns()) {
+                if (StringUtils.isNotBlank(path)) {
+                    interceptorMap.put(path, obj);
+                }
+            }
 
             //设置field
             Field[] fields = clazz.getDeclaredFields();
@@ -362,17 +364,9 @@ public class ServerContext {
         }
     }
 
-    public Collection<Filter> getFilters(){
-        return filterMap.values();
+
+    public List<HandlerInterceptor> getInterceptors(String path) {
+        return interceptorMap.entrySet().stream().filter(entry -> PathMatcher.me.match(entry.getKey(), path)).map(Map.Entry::getValue).collect(Collectors.toList());
     }
 
-    /*public boolean executeFilter(FlyingRequest flyingRequest, FlyingResponse flyingResponse) {
-        for (Map.Entry<Integer, Filter> entry : filterMap.entrySet()) {
-            boolean result = entry.getValue().doFilter(flyingRequest, flyingResponse);
-            if (!result) {
-                return false;
-            }
-        }
-        return true;
-    }*/
 }

@@ -17,7 +17,7 @@
         <dependency>
             <groupId>cn.hutool</groupId>
             <artifactId>hutool-all</artifactId>
-            <version>4.3.1</version>
+            <version>4.4.0</version>
         </dependency>
         <dependency>
             <groupId>org.projectlombok</groupId>
@@ -30,11 +30,11 @@
             <artifactId>commons-lang3</artifactId>
             <version>3.8.1</version>
         </dependency>
-        <dependency>
+        <!--<dependency>
             <groupId>com.alibaba</groupId>
             <artifactId>fastjson</artifactId>
             <version>1.2.54</version>
-        </dependency>
+        </dependency>-->
         <dependency>
             <groupId>org.ow2.asm</groupId>
             <artifactId>asm</artifactId>
@@ -46,6 +46,12 @@
             <artifactId>logback-classic</artifactId>
             <version>1.2.3</version>
             <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>2.9.8</version>
         </dependency>
     </dependencies>
 
@@ -60,7 +66,16 @@
                 </configuration>
             </plugin>
         </plugins>
-      <!-- <resources>
+
+        <!--<resources>
+            <resource>
+                <directory>src/main/java</directory>
+                <excludes>
+                    <exclude>**/example/**</exclude>
+                </excludes>
+                <filtering>false</filtering>
+            </resource>
+
             <resource>
                 <directory>src/main/resources</directory>
                 <excludes>
@@ -71,4 +86,10 @@
         </resources>-->
     </build>
 
+    <distributionManagement>
+        <repository>
+            <id>snapshot</id>
+            <url>https://maven.flaginfo.cn/nexus/content/repositories/snapshots/</url>
+        </repository>
+    </distributionManagement>
 </project>

@@ -1,6 +1,7 @@
 package com.gao.flying.netty.handler;
 
 import com.gao.flying.context.ServerContext;
+import com.gao.flying.mvc.Mvcs;
 import com.gao.flying.mvc.http.*;
 import com.gao.flying.mvc.utils.RespUtils;
 import io.netty.channel.ChannelHandlerContext;
@@ -29,7 +30,8 @@ public class HttpServerHandler extends ChannelInboundHandlerAdapter {
 
         FlyingRequest flyingRequest = new DefaultFlyingRequest((FullHttpRequest) msg, ctx);
         FlyingResponse flyingResponse = DefaultFlyingResponse.buildSuccess(ctx);
-
+        /*Mvcs.request.set(flyingRequest);
+        Mvcs.response.set(flyingResponse);*/
         try {
             Dispatcher.me.execute(serverContext, flyingRequest, flyingResponse);
         } catch (Exception e) {
@@ -37,6 +39,8 @@ public class HttpServerHandler extends ChannelInboundHandlerAdapter {
             RespUtils.sendResponse(flyingResponse);
         } finally {
             ReferenceCountUtil.release(flyingRequest.httpRequest());
+            /*Mvcs.request.remove();
+            Mvcs.response.remove();*/
         }
     }
 

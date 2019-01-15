@@ -1,6 +1,5 @@
 package com.gao.flying.mvc.utils;
 
-import com.alibaba.fastjson.JSONObject;
 import com.gao.flying.mvc.http.FlyingResponse;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.*;
@@ -24,7 +23,7 @@ public class RespUtils {
 
     private static HttpResponse buildHttpResponse(Object obj, HttpResponseStatus httpResponseStatus) {
         if (!(obj instanceof HttpResponse)) {
-            byte[] respBytes = obj == null ? "".getBytes() : JSONObject.toJSONString(obj).getBytes();
+            byte[] respBytes = obj == null ? "".getBytes() : JsonTools.DEFAULT.toJson(obj).getBytes();
             FullHttpResponse fullHttpResponse = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, httpResponseStatus, Unpooled.wrappedBuffer(respBytes));
             fullHttpResponse.headers().set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
             fullHttpResponse.headers().add(HttpHeaderNames.CONTENT_LENGTH, respBytes.length);
