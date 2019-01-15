@@ -65,7 +65,8 @@ public class ServerContext {
             throw new RuntimeException("需要配置" + FlyingConst.BASE_PACKAGE_STRING);
         }
 
-        executorService = new ThreadPoolExecutor(props.getInt(FlyingConst.DISPATHCER_THREAD_CORE_SIZE, 600), props.getInt(FlyingConst.DISPATHCER_THREAD_MAX_SIZE, 1500), 0, TimeUnit.MILLISECONDS, new SynchronousQueue<>(), new DefaultThreadFactory("dispatcher-pool"));
+        executorService = ThreadUtil.newExecutor(600,1200);
+        //new ThreadPoolExecutor(props.getInt(FlyingConst.DISPATHCER_THREAD_CORE_SIZE, 600), props.getInt(FlyingConst.DISPATHCER_THREAD_MAX_SIZE, 1500), 0, TimeUnit.MILLISECONDS, new SynchronousQueue<>(), new DefaultThreadFactory("dispatcher-pool"));
 
         try {
             initBeans();
