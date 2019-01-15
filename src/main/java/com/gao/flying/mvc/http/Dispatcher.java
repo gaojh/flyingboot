@@ -8,6 +8,7 @@ import cn.hutool.log.Log;
 import cn.hutool.log.LogFactory;
 import com.fasterxml.jackson.databind.JavaType;
 import com.gao.flying.context.ServerContext;
+import com.gao.flying.mvc.Mvcs;
 import com.gao.flying.mvc.annotation.PathParam;
 import com.gao.flying.mvc.annotation.RequestBody;
 import com.gao.flying.mvc.annotation.RequestParam;
@@ -18,6 +19,7 @@ import com.gao.flying.mvc.utils.PathMatcher;
 import com.gao.flying.mvc.utils.RespUtils;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.*;
+import io.netty.util.ReferenceCountUtil;
 import org.apache.commons.lang3.StringUtils;
 
 import java.io.ByteArrayOutputStream;
@@ -47,7 +49,8 @@ public enum Dispatcher {
 
 
     public void execute(ServerContext serverContext, FlyingRequest flyingRequest, FlyingResponse flyingResponse) throws Exception {
-
+        Mvcs.request.set(flyingRequest);
+        Mvcs.response.set(flyingResponse);
         HandlerInterceptorChain interceptorChain = new HandlerInterceptorChain(serverContext.getInterceptors(flyingRequest.url()));
         CompletableFuture<FlyingResponse> future;
 
@@ -78,7 +81,11 @@ public enum Dispatcher {
                 e.printStackTrace();
             }
             return resp;
-        }).thenAccept(RespUtils::sendResponse);
+        }).thenAccept(resp -> RespUtils.sendResponse(flyingRequest, resp)).thenRun(() -> {
+            ReferenceCountUtil.release(flyingRequest.httpRequest());
+            Mvcs.request.remove();
+            Mvcs.response.remove();
+        });
 
     }
 

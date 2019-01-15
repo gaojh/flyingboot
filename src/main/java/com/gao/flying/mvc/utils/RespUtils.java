@@ -1,7 +1,9 @@
 package com.gao.flying.mvc.utils;
 
+import com.gao.flying.mvc.http.FlyingRequest;
 import com.gao.flying.mvc.http.FlyingResponse;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.handler.codec.http.*;
 
 /**
@@ -10,13 +12,19 @@ import io.netty.handler.codec.http.*;
  */
 public class RespUtils {
 
-    public static void sendResponse(FlyingResponse flyingResponse) {
+
+    public static void sendResponse(FlyingRequest flyingRequest, FlyingResponse flyingResponse) {
+        HttpResponse httpResponse;
         if (flyingResponse.success()) {
-            HttpResponse httpResponse = buildHttpResponse(flyingResponse.data(),HttpResponseStatus.OK);
-            flyingResponse.ctx().writeAndFlush(httpResponse);
+            httpResponse = buildHttpResponse(flyingResponse.data(), HttpResponseStatus.OK);
         } else {
-            HttpResponse httpResponse = buildHttpResponse(flyingResponse.msg(),flyingResponse.httpResponseStatus());
-            flyingResponse.ctx().writeAndFlush(httpResponse);
+            httpResponse = buildHttpResponse(flyingResponse.msg(), flyingResponse.httpResponseStatus());
+        }
+
+        if (HttpUtil.isKeepAlive(flyingRequest.httpRequest())) {
+            flyingRequest.ctx().writeAndFlush(httpResponse);
+        } else {
+            flyingRequest.ctx().writeAndFlush(httpResponse).addListener(ChannelFutureListener.CLOSE);
         }
     }
 
