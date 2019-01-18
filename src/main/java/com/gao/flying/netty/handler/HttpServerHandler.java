@@ -29,6 +29,14 @@ public class HttpServerHandler extends ChannelInboundHandlerAdapter {
 
         FlyingRequest flyingRequest = new DefaultFlyingRequest((FullHttpRequest) msg, ctx);
         FlyingResponse flyingResponse = DefaultFlyingResponse.buildSuccess(ctx);
+        FlyingRoute flyingRoute = serverContext.fetchGetRoute(flyingRequest.url());
+
+        if (flyingRoute == null) {
+            flyingResponse.success(false).msg("未找到对应的处理器").httpResponseStatus(HttpResponseStatus.BAD_REQUEST);
+            RespUtils.sendResponse(flyingRequest, flyingResponse);
+            return;
+        }
+
         try {
             Dispatcher.me.execute(serverContext, flyingRequest, flyingResponse);
         } catch (Exception e) {

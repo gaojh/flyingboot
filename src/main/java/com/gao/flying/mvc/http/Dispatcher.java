@@ -53,6 +53,7 @@ public enum Dispatcher {
         Mvcs.response.set(flyingResponse);
         HandlerInterceptorChain interceptorChain = new HandlerInterceptorChain(serverContext.getInterceptors(flyingRequest.url()));
         CompletableFuture<FlyingResponse> future;
+        RespUtils.sendResponse(flyingRequest, flyingResponse);
 
         //拦截
         if (interceptorChain.applyPreHandle(flyingRequest, flyingResponse)) {
@@ -87,13 +88,11 @@ public enum Dispatcher {
             Mvcs.response.remove();
         });
 
+
     }
 
     private CompletableFuture<FlyingResponse> doGet(ServerContext serverContext, FlyingRequest flyingRequest, FlyingResponse flyingResponse) {
         FlyingRoute flyingRoute = serverContext.fetchGetRoute(flyingRequest.url());
-        if (flyingRoute == null) {
-            return CompletableFuture.completedFuture(flyingResponse.success(false).msg("未找到对应的处理器").httpResponseStatus(HttpResponseStatus.BAD_REQUEST));
-        }
         Method method = flyingRoute.getMethod();
         Parameter[] params = method.getParameters();
         String[] parameterNames = ClassUtils.getMethodParamNames(method);
@@ -137,9 +136,6 @@ public enum Dispatcher {
 
     private CompletableFuture<FlyingResponse> doPost(ServerContext serverContext, FlyingRequest flyingRequest, FlyingResponse flyingResponse) {
         FlyingRoute flyingRoute = serverContext.fetchPostRoute(flyingRequest.url());
-        if (flyingRoute == null) {
-            return CompletableFuture.completedFuture(flyingResponse.success(false).msg("未找到对应的处理器").httpResponseStatus(HttpResponseStatus.BAD_REQUEST));
-        }
         Method method = flyingRoute.getMethod();
         Parameter[] params = method.getParameters();
         Type[] types = method.getGenericParameterTypes();
@@ -179,7 +175,6 @@ public enum Dispatcher {
             } catch (Exception e) {
                 log.error(e);
                 flyingResponse.msg(e.getCause().getMessage()).success(false);
-                return flyingResponse;
             }
             return flyingResponse;
         }, serverContext.getExecutorService());

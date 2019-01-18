@@ -10,7 +10,7 @@ import java.lang.annotation.*;
 @Documented
 @Target({ElementType.METHOD, ElementType.TYPE})
 public @interface Route {
-    String value() default "/";
+    String value() default "";
 
     METHOD method() default METHOD.ALL;
 
