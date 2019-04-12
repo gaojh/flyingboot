@@ -7,7 +7,7 @@ import io.netty.handler.codec.http.HttpResponseStatus;
  * @author 高建华
  * @date 2018/6/24 下午8:26
  */
-public class DefaultFlyingResponse implements FlyingResponse {
+public class FlyingHttpResponse implements HttpResponse {
 
     private ChannelHandlerContext ctx;
     private boolean success;
@@ -15,8 +15,8 @@ public class DefaultFlyingResponse implements FlyingResponse {
     private Object data;
     private HttpResponseStatus httpResponseStatus;
 
-    public static FlyingResponse buildSuccess(ChannelHandlerContext ctx) {
-        DefaultFlyingResponse response = new DefaultFlyingResponse();
+    public static HttpResponse buildSuccess(ChannelHandlerContext ctx) {
+        FlyingHttpResponse response = new FlyingHttpResponse();
         response.ctx = ctx;
         response.success = true;
         response.httpResponseStatus = HttpResponseStatus.OK;
@@ -29,7 +29,7 @@ public class DefaultFlyingResponse implements FlyingResponse {
     }
 
     @Override
-    public FlyingResponse success(boolean res) {
+    public HttpResponse success(boolean res) {
         this.success = res;
         return this;
     }
@@ -40,7 +40,7 @@ public class DefaultFlyingResponse implements FlyingResponse {
     }
 
     @Override
-    public FlyingResponse msg(String msg) {
+    public HttpResponse msg(String msg) {
         this.msg = msg;
         return this;
     }
@@ -51,7 +51,7 @@ public class DefaultFlyingResponse implements FlyingResponse {
     }
 
     @Override
-    public FlyingResponse data(Object data) {
+    public HttpResponse data(Object data) {
         this.data = data;
         return this;
     }
@@ -62,7 +62,7 @@ public class DefaultFlyingResponse implements FlyingResponse {
     }
 
     @Override
-    public FlyingResponse httpResponseStatus(HttpResponseStatus httpResponseStatus) {
+    public HttpResponse httpResponseStatus(HttpResponseStatus httpResponseStatus) {
         this.httpResponseStatus = httpResponseStatus;
         return this;
     }

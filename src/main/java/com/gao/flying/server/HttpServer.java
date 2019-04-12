@@ -1,11 +1,14 @@
-package com.gao.flying.netty;
+package com.gao.flying.server;
 
 import cn.hutool.core.thread.NamedThreadFactory;
-import cn.hutool.core.thread.ThreadUtil;
 import cn.hutool.log.Log;
 import cn.hutool.log.LogFactory;
-import com.gao.flying.context.ServerContext;
-import com.gao.flying.netty.handler.HttpServerHandler;
+import com.gao.flying.config.ApplicationConfig;
+import com.gao.flying.config.ApplicationEnvironment;
+import com.gao.flying.context.ApplicationContext;
+import com.gao.flying.context.FlyingContext;
+import com.gao.flying.server.handler.HttpServerHandler;
+import com.gao.flying.server.handler.HttpServerHandler2;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.*;
@@ -23,21 +26,18 @@ import io.netty.util.NetUtil;
  * @author 高建华
  * @date 2018/6/21 下午2:03
  */
-public class Server {
+public class HttpServer {
 
     private EventLoopGroup boss;
     private EventLoopGroup worker;
     private ServerBootstrap bootstrap;
 
-    private ServerContext serverContext;
-
     private static Log log = LogFactory.get();
 
 
-    public Server(ServerContext serverContext) {
-        this.serverContext = serverContext;
-        int bossSize = Integer.parseInt(System.getProperty("netty.boss.size", "2"));
-        int workerSize = Integer.parseInt(System.getProperty("netty.worker.size", "4"));
+    public HttpServer() {
+        int bossSize = Integer.parseInt(System.getProperty("server.boss.size", "2"));
+        int workerSize = Integer.parseInt(System.getProperty("server.worker.size", "4"));
         boss = new NioEventLoopGroup(bossSize, new NamedThreadFactory("NettyServerBoss", true));
         worker = new NioEventLoopGroup(workerSize, new NamedThreadFactory("NettyServerWorker", true));
         bootstrap = new ServerBootstrap();
@@ -63,18 +63,17 @@ public class Server {
                         .addLast("support-aggregator", new HttpObjectAggregator(1024 * 1024))
                         .addLast("encoder", new HttpResponseEncoder())
                         .addLast("chunk", new ChunkedWriteHandler())
-                        .addLast("business-handler", new HttpServerHandler(serverContext));
+                        .addLast("business-handler", new HttpServerHandler2());
             }
         });
     }
 
     public synchronized void start() throws InterruptedException {
-        String port = System.getProperty("server.port", serverContext.getProps().getStr("server.port", "8080"));
 
-        ChannelFuture channelFuture = bootstrap.bind(Integer.parseInt(port)).sync();
-        log.info("启动成功，端口：{}", port);
+        ChannelFuture channelFuture = bootstrap.bind(ApplicationConfig.PORT).sync();
+        log.info("启动成功，端口：{}", ApplicationConfig.PORT);
         Channel channel = channelFuture.channel();
-        channel.closeFuture().addListener(future -> log.info("停止服务成功，端口：{}", port)).sync();
+        channel.closeFuture().addListener(future -> log.info("停止服务成功，端口：{}", ApplicationConfig.PORT)).sync();
         // 监听服务器关闭监听
         Runtime.getRuntime().addShutdownHook(new Thread(this::shutdown));
     }

@@ -1,7 +1,7 @@
 package com.gao.flying.mvc.interceptor;
 
-import com.gao.flying.mvc.http.FlyingRequest;
-import com.gao.flying.mvc.http.FlyingResponse;
+import com.gao.flying.mvc.http.HttpRequest;
+import com.gao.flying.mvc.http.HttpResponse;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -38,12 +38,12 @@ public class HandlerInterceptorChain {
         this.handlerInterceptorList.addAll(handlerInterceptors);
     }
 
-    public boolean applyPreHandle(FlyingRequest flyingRequest, FlyingResponse flyingResponse) throws Exception {
+    public boolean applyPreHandle(HttpRequest httpRequest, HttpResponse httpResponse) throws Exception {
         if (!handlerInterceptorList.isEmpty()) {
             for (int i = 0; i < handlerInterceptorList.size(); i++) {
                 HandlerInterceptor handlerInterceptor = handlerInterceptorList.get(i);
-                if (!handlerInterceptor.preHandle(flyingRequest, flyingResponse)) {
-                    triggerAfterCompletion(flyingRequest, flyingResponse);
+                if (!handlerInterceptor.preHandle(httpRequest, httpResponse)) {
+                    triggerAfterCompletion(httpRequest, httpResponse);
                     return false;
                 }
                 this.interceptorIndex = i;
@@ -52,20 +52,20 @@ public class HandlerInterceptorChain {
         return true;
     }
 
-    public void applyPostHandle(FlyingRequest flyingRequest, FlyingResponse flyingResponse) throws Exception {
+    public void applyPostHandle(HttpRequest httpRequest, HttpResponse httpResponse) throws Exception {
         if (!handlerInterceptorList.isEmpty()) {
             for (int i = handlerInterceptorList.size() - 1; i >= 0; i--) {
                 HandlerInterceptor handlerInterceptor = handlerInterceptorList.get(i);
-                handlerInterceptor.postHandle(flyingRequest, flyingResponse);
+                handlerInterceptor.postHandle(httpRequest, httpResponse);
             }
         }
     }
 
-    private void triggerAfterCompletion(FlyingRequest flyingRequest, FlyingResponse flyingResponse) throws Exception {
+    private void triggerAfterCompletion(HttpRequest httpRequest, HttpResponse httpResponse) throws Exception {
         if (!handlerInterceptorList.isEmpty()) {
             for (int i = this.interceptorIndex; i >= 0; i--) {
                 HandlerInterceptor handlerInterceptor = handlerInterceptorList.get(i);
-                handlerInterceptor.afterCompletion(flyingRequest, flyingResponse);
+                handlerInterceptor.afterCompletion(httpRequest, httpResponse);
             }
         }
     }

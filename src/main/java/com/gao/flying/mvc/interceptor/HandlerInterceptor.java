@@ -1,7 +1,7 @@
 package com.gao.flying.mvc.interceptor;
 
-import com.gao.flying.mvc.http.FlyingRequest;
-import com.gao.flying.mvc.http.FlyingResponse;
+import com.gao.flying.mvc.http.HttpRequest;
+import com.gao.flying.mvc.http.HttpResponse;
 
 /**
  * @author 高建华
@@ -9,9 +9,28 @@ import com.gao.flying.mvc.http.FlyingResponse;
  */
 public interface HandlerInterceptor {
 
-    boolean preHandle(FlyingRequest flyingRequest, FlyingResponse flyingResponse) throws Exception;
+    /**
+     * 前置过滤
+     * @param httpRequest
+     * @param httpResponse
+     * @return
+     * @throws Exception
+     */
+    boolean preHandle(HttpRequest httpRequest, HttpResponse httpResponse) throws Exception;
 
-    void postHandle(FlyingRequest flyingRequest, FlyingResponse flyingResponse) throws Exception;
+    /**
+     * 后置过滤
+     * @param httpRequest
+     * @param httpResponse
+     * @throws Exception
+     */
+    void postHandle(HttpRequest httpRequest, HttpResponse httpResponse) throws Exception;
 
-    void afterCompletion(FlyingRequest flyingRequest, FlyingResponse flyingResponse) throws Exception;
+    /**
+     * 最终过滤
+     * @param httpRequest
+     * @param httpResponse
+     * @throws Exception
+     */
+    void afterCompletion(HttpRequest httpRequest, HttpResponse httpResponse) throws Exception;
 }

@@ -1,7 +1,7 @@
 package com.gao.flying.mvc;
 
-import com.gao.flying.mvc.http.FlyingRequest;
-import com.gao.flying.mvc.http.FlyingResponse;
+import com.gao.flying.mvc.http.HttpRequest;
+import com.gao.flying.mvc.http.HttpResponse;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -15,7 +15,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class MvcContext {
 
-    private FlyingRequest flyingRequest;
-    private FlyingResponse flyingResponse;
+    private HttpRequest httpRequest;
+    private HttpResponse httpResponse;
 
 }

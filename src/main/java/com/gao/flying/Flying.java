@@ -1,10 +1,14 @@
 package com.gao.flying;
 
-import cn.hutool.setting.dialect.Props;
-import com.gao.flying.netty.Server;
-import com.gao.flying.context.ServerContext;
+import com.gao.flying.config.ApplicationConfig;
+import com.gao.flying.config.ApplicationEnvironment;
+import com.gao.flying.context.ApplicationContext;
+import com.gao.flying.context.ApplicationUtil;
+import com.gao.flying.ioc.annotation.ComponentScan;
+import com.gao.flying.mvc.ApplicationRunner;
+import com.gao.flying.server.HttpServer;
 
-import java.nio.charset.Charset;
+import java.util.List;
 
 /**
  * @author 高建华
@@ -12,16 +16,35 @@ import java.nio.charset.Charset;
  */
 public class Flying {
 
-    public static void run(Class<?> source, String... args) {
-        String basePackage = source.getPackage().getName();
-        Props props = new Props("application.properties", Charset.forName("UTF-8"));
-        if (!props.containsKey(FlyingConst.BASE_PACKAGE_STRING)) {
-            props.put(FlyingConst.BASE_PACKAGE_STRING, basePackage);
+    public static void run(Class<?> source) {
+
+        if (source == null) {
+            throw new RuntimeException("启动类为空");
         }
-        ServerContext serverContext = new ServerContext(props);
-        Server server = new Server(serverContext);
+
+        ApplicationEnvironment environment = new ApplicationEnvironment();
+
+        if (source.isAnnotationPresent(ComponentScan.class)) {
+            ComponentScan componentScan = source.getAnnotation(ComponentScan.class);
+            if (componentScan.value().length > 0) {
+                ApplicationConfig.BASE_PACKAGE = componentScan.value();
+
+            }
+        } else {
+            ApplicationConfig.BASE_PACKAGE = new String[]{source.getPackage().getName()};
+        }
+
+        ApplicationConfig.PORT = environment.getInteger("server.port", 2019);
+
+        ApplicationContext applicationContext = new ApplicationContext(environment);
+        ApplicationUtil.setApplicationContext(applicationContext);
+
+        List<ApplicationRunner> applicationRunners = applicationContext.getApplicationRunners();
+        applicationRunners.forEach(ApplicationRunner::run);
+
+        HttpServer httpServer = new HttpServer();
         try {
-            server.start();
+            httpServer.start();
         } catch (InterruptedException e) {
             e.printStackTrace();
         }

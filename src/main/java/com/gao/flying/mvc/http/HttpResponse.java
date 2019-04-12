@@ -7,23 +7,23 @@ import io.netty.handler.codec.http.HttpResponseStatus;
  * @author 高建华
  * @date 2018/7/5 上午11:18
  */
-public interface FlyingResponse {
+public interface HttpResponse {
 
     ChannelHandlerContext ctx();
 
-    FlyingResponse success(boolean res);
+    HttpResponse success(boolean res);
 
     boolean success();
 
-    FlyingResponse msg(String msg);
+    HttpResponse msg(String msg);
 
     String msg();
 
-    FlyingResponse data(Object data);
+    HttpResponse data(Object data);
 
     Object data();
 
-    FlyingResponse httpResponseStatus(HttpResponseStatus httpResponseStatus);
+    HttpResponse httpResponseStatus(HttpResponseStatus httpResponseStatus);
 
     HttpResponseStatus httpResponseStatus();
 }

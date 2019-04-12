@@ -9,11 +9,9 @@ import java.lang.annotation.*;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Target({ElementType.METHOD, ElementType.TYPE})
-public @interface Route {
-    String value() default "";
-
+public @interface RequestMapping {
+    String[] value() default {};
     METHOD method() default METHOD.ALL;
-
     enum METHOD {
         /**
          * 请求类型

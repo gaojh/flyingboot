@@ -9,5 +9,6 @@ import java.lang.annotation.*;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Target(ElementType.TYPE)
-public @interface Ctrl {
+public @interface Controller {
+    String value() default "";
 }

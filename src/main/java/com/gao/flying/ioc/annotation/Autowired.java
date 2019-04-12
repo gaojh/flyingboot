@@ -9,6 +9,6 @@ import java.lang.annotation.*;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Target(ElementType.FIELD)
-public @interface Inject {
+public @interface Autowired {
     String value() default "";
 }

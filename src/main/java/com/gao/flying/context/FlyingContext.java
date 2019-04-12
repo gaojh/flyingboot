@@ -7,16 +7,15 @@ import cn.hutool.log.Log;
 import cn.hutool.log.LogFactory;
 import cn.hutool.setting.dialect.Props;
 import com.gao.flying.FlyingConst;
-import com.gao.flying.ioc.annotation.Bean;
-import com.gao.flying.ioc.annotation.Inject;
+import com.gao.flying.ioc.annotation.Component;
+import com.gao.flying.ioc.annotation.Autowired;
 import com.gao.flying.ioc.annotation.Value;
 import com.gao.flying.ioc.bean.BeanDefine;
 import com.gao.flying.mvc.ApplicationRunner;
 import com.gao.flying.mvc.annotation.*;
-import com.gao.flying.mvc.http.FlyingRoute;
+import com.gao.flying.mvc.http.HttpRoute;
 import com.gao.flying.mvc.interceptor.HandlerInterceptor;
 import com.gao.flying.mvc.utils.PathMatcher;
-import io.netty.util.concurrent.DefaultThreadFactory;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -33,18 +32,18 @@ import java.util.stream.Collectors;
  * @date 2018/6/22 下午2:43
  */
 @NoArgsConstructor
-public class ServerContext {
+public class FlyingContext {
 
     @Setter
     @Getter
     private Props props;
 
     @Getter
-    private ConcurrentHashMap<String, FlyingRoute> routeGetMap = new ConcurrentHashMap<>();
-    private ConcurrentHashMap<String, FlyingRoute> routeGetPatternMap = new ConcurrentHashMap<>();
+    private ConcurrentHashMap<String, HttpRoute> routeGetMap = new ConcurrentHashMap<>();
+    private ConcurrentHashMap<String, HttpRoute> routeGetPatternMap = new ConcurrentHashMap<>();
     @Getter
-    private ConcurrentHashMap<String, FlyingRoute> routePostMap = new ConcurrentHashMap<>();
-    private ConcurrentHashMap<String, FlyingRoute> routePostPatternMap = new ConcurrentHashMap<>();
+    private ConcurrentHashMap<String, HttpRoute> routePostMap = new ConcurrentHashMap<>();
+    private ConcurrentHashMap<String, HttpRoute> routePostPatternMap = new ConcurrentHashMap<>();
 
     private ConcurrentHashMap<String, Class<?>> beanClassMap = new ConcurrentHashMap<>();
 
@@ -58,14 +57,14 @@ public class ServerContext {
 
     private static Log log = LogFactory.get();
 
-    public ServerContext(Props props) {
+    public FlyingContext(Props props) {
         this.props = props;
 
         if (props.getStr(FlyingConst.BASE_PACKAGE_STRING) == null) {
             throw new RuntimeException("需要配置" + FlyingConst.BASE_PACKAGE_STRING);
         }
 
-        executorService = ThreadUtil.newExecutor(600,1200);
+        executorService = ThreadUtil.newExecutor(600, 1200);
         //new ThreadPoolExecutor(props.getInt(FlyingConst.DISPATHCER_THREAD_CORE_SIZE, 600), props.getInt(FlyingConst.DISPATHCER_THREAD_MAX_SIZE, 1500), 0, TimeUnit.MILLISECONDS, new SynchronousQueue<>(), new DefaultThreadFactory("dispatcher-pool"));
 
         try {
@@ -83,18 +82,18 @@ public class ServerContext {
         return executorService;
     }
 
-    public FlyingRoute fetchGetRoute(String url) {
+    public HttpRoute fetchGetRoute(String url) {
         return getRoute(url, routeGetMap, routeGetPatternMap);
     }
 
-    public FlyingRoute fetchPostRoute(String url) {
+    public HttpRoute fetchPostRoute(String url) {
         return getRoute(url, routePostMap, routePostPatternMap);
     }
 
-    private FlyingRoute getRoute(String url, ConcurrentHashMap<String, FlyingRoute> routeMap, ConcurrentHashMap<String, FlyingRoute> routePatternMap) {
-        FlyingRoute route = routeMap.get(url);
+    private HttpRoute getRoute(String url, ConcurrentHashMap<String, HttpRoute> routeMap, ConcurrentHashMap<String, HttpRoute> routePatternMap) {
+        HttpRoute route = routeMap.get(url);
         if (route == null) {
-            Optional<FlyingRoute> optional = routePatternMap.entrySet().stream().filter(entry -> PathMatcher.me.match(entry.getKey(), url)).map(Map.Entry::getValue).findFirst();
+            Optional<HttpRoute> optional = routePatternMap.entrySet().stream().filter(entry -> PathMatcher.me.match(entry.getKey(), url)).map(Map.Entry::getValue).findFirst();
             if (optional.isPresent()) {
                 route = optional.get();
             }
@@ -107,7 +106,7 @@ public class ServerContext {
      */
     private void initBeans() throws Exception {
         log.info("开始初始化Bean");
-        Set<Class<?>> beans = ClassUtil.scanPackageByAnnotation(props.getStr(FlyingConst.BASE_PACKAGE_STRING), Bean.class);
+        Set<Class<?>> beans = ClassUtil.scanPackageByAnnotation(props.getStr(FlyingConst.BASE_PACKAGE_STRING), Component.class);
         //先将有注解bean的class以及其接口，都放入map中待用
         beans.forEach(clazz -> {
 
@@ -122,8 +121,8 @@ public class ServerContext {
 
         //开始初始化bean
         for (Class clazz : beans) {
-            Bean bean = (Bean) clazz.getAnnotation(Bean.class);
-            String name = StrUtil.isBlank(bean.name()) ? clazz.getName() : bean.name();
+            Component component = (Component) clazz.getAnnotation(Component.class);
+            String name = StrUtil.isBlank(component.value()) ? clazz.getName() : component.value();
             BeanDefine beanDefine = createBean(clazz);
             beanDefineMap.put(name, beanDefine);
         }
@@ -132,8 +131,8 @@ public class ServerContext {
     }
 
     private BeanDefine createBean(Class clazz) throws Exception {
-        Bean bean = (Bean) clazz.getAnnotation(Bean.class);
-        String name = StrUtil.isBlank(bean.name()) ? clazz.getName() : bean.name();
+        Component component = (Component) clazz.getAnnotation(Component.class);
+        String name = StrUtil.isBlank(component.value()) ? clazz.getName() : component.value();
         if (beanDefineMap.containsKey(name)) {
             log.debug("{}已经初始化，跳过！", name);
             return beanDefineMap.get(name);
@@ -152,16 +151,15 @@ public class ServerContext {
         log.info("初始化：{}", name);
         Object obj = clazz.newInstance();
         BeanDefine beanDefine = new BeanDefine(obj);
-        beanDefine.setSingle(bean.singleton());
 
         initBeanDefineMap.put(name, beanDefine);
 
         Field[] fields = clazz.getDeclaredFields();
         for (Field field : fields) {
-            Inject inject = field.getAnnotation(Inject.class);
+            Autowired autowired = field.getAnnotation(Autowired.class);
             Value value = field.getAnnotation(Value.class);
             String fieldName = field.getType().getName();
-            if (inject != null) {
+            if (autowired != null) {
                 log.debug("设置Field：{}", fieldName);
                 field.setAccessible(true);
                 BeanDefine fieldObj = initBeanDefineMap.get(fieldName);
@@ -197,69 +195,76 @@ public class ServerContext {
             Field[] fields = clazz.getDeclaredFields();
             setFields(clazz, obj, fields);
         }
+        log.info("初始化Interceptor完成");
     }
 
     /**
-     * 初始化Controller
+     * 初始化controller
+     * @throws Exception
      */
     private void initController() throws Exception {
         log.info("开始初始化Controller");
-        Set<Class<?>> controllers = ClassUtil.scanPackageByAnnotation(props.getStr(FlyingConst.BASE_PACKAGE_STRING), Ctrl.class);
+        Set<Class<?>> controllers = ClassUtil.scanPackageByAnnotation(props.getStr(FlyingConst.BASE_PACKAGE_STRING), Controller.class);
         for (Class clazz : controllers) {
-            Route c = (Route) clazz.getAnnotation(Route.class);
-            String path = c == null ? "/" : c.value();
+            RequestMapping c = (RequestMapping) clazz.getAnnotation(RequestMapping.class);
+            String[] ctrlPath = c == null ? new String[]{""} : c.value();
             Object obj = clazz.newInstance();
-
             //设置field
             Field[] fields = clazz.getDeclaredFields();
             setFields(clazz, obj, fields);
 
-
             Method[] methods = clazz.getDeclaredMethods();
             for (Method method : methods) {
-                Route rm = method.getAnnotation(Route.class);
+                RequestMapping rm = method.getAnnotation(RequestMapping.class);
                 if (rm != null) {
-                    String url = path + (StrUtil.isEmpty(rm.value()) ? "" : rm.value());
-                    if (!StrUtil.startWith(url, "/")) {
-                        url = "/" + url;
-                    }
-                    url = StrUtil.replace(url, "//", "/");
+                    String[] methodPath = rm.value();
+                    for(String path : ctrlPath){
+                        for(String mpath : methodPath){
+                            String url = path + mpath;
+                            if (!StrUtil.startWith(url, "/")) {
+                                url = "/" + url;
+                            }
+                            url = StrUtil.replace(url, "//", "/");
 
-                    log.info("注册：{} --> {}", url, clazz.getName() + "." + method.getName());
+                            if (rm.method().equals(RequestMapping.METHOD.GET)) {
+                                if (PathMatcher.me.isPattern(url)) {
+                                    routeGetPatternMap.putIfAbsent(url, new HttpRoute(clazz, obj, method, url));
+                                } else {
+                                    routeGetMap.putIfAbsent(url, new HttpRoute(clazz, obj, method, url));
+                                }
+                            } else if (rm.method().equals(RequestMapping.METHOD.POST)) {
+                                if (PathMatcher.me.isPattern(url)) {
+                                    routePostPatternMap.putIfAbsent(url, new HttpRoute(clazz, obj, method, url));
+                                } else {
+                                    routePostMap.putIfAbsent(url, new HttpRoute(clazz, obj, method, url));
+                                }
+                            } else {
+                                if (PathMatcher.me.isPattern(url)) {
+                                    routeGetPatternMap.putIfAbsent(url, new HttpRoute(clazz, obj, method, url));
+                                    routePostPatternMap.putIfAbsent(url, new HttpRoute(clazz, obj, method, url));
+                                } else {
+                                    routeGetMap.putIfAbsent(url, new HttpRoute(clazz, obj, method, url));
+                                    routePostMap.putIfAbsent(url, new HttpRoute(clazz, obj, method, url));
+                                }
+                            }
 
-                    if (rm.method().equals(Route.METHOD.GET)) {
-                        if (PathMatcher.me.isPattern(url)) {
-                            routeGetPatternMap.putIfAbsent(url, new FlyingRoute(clazz, obj, method, url));
-                        } else {
-                            routeGetMap.putIfAbsent(url, new FlyingRoute(clazz, obj, method, url));
-                        }
-                    } else if (rm.method().equals(Route.METHOD.POST)) {
-                        if (PathMatcher.me.isPattern(url)) {
-                            routePostPatternMap.putIfAbsent(url, new FlyingRoute(clazz, obj, method, url));
-                        } else {
-                            routePostMap.putIfAbsent(url, new FlyingRoute(clazz, obj, method, url));
-                        }
-                    } else {
-                        if (PathMatcher.me.isPattern(url)) {
-                            routeGetPatternMap.putIfAbsent(url, new FlyingRoute(clazz, obj, method, url));
-                            routePostPatternMap.putIfAbsent(url, new FlyingRoute(clazz, obj, method, url));
-                        } else {
-                            routeGetMap.putIfAbsent(url, new FlyingRoute(clazz, obj, method, url));
-                            routePostMap.putIfAbsent(url, new FlyingRoute(clazz, obj, method, url));
+                            log.info("注册：{} --> {}", url, clazz.getName() + "." + method.getName());
                         }
                     }
+
                 }
             }
         }
         log.info("初始化Controller完成");
     }
 
+
     private void setFields(Class clazz, Object obj, Field[] fields) throws IllegalAccessException {
         for (Field field : fields) {
-            Inject inject = field.getAnnotation(Inject.class);
+            Autowired autowired = field.getAnnotation(Autowired.class);
             Value value = field.getAnnotation(Value.class);
             String fieldName = field.getType().getName();
-            if (inject != null) {
+            if (autowired != null) {
                 log.debug("设置Field：{}", fieldName);
                 field.setAccessible(true);
                 BeanDefine fieldBeanDefine = beanDefineMap.get(fieldName);

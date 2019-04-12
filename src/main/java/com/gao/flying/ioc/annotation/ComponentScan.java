@@ -4,12 +4,11 @@ import java.lang.annotation.*;
 
 /**
  * @author 高建华
- * @date 2018/7/6 下午3:17
+ * @date 2019-03-30 23:01
  */
 @Retention(RetentionPolicy.RUNTIME)
+@Target({ElementType.TYPE})
 @Documented
-@Target(ElementType.TYPE)
-public @interface Bean {
-    String name() default "";
-    boolean singleton() default true;
+public @interface ComponentScan {
+    String[] value() default {};
 }

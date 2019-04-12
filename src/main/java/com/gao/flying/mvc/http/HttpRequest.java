@@ -13,7 +13,7 @@ import java.util.Map;
  * @author 高建华
  * @date 2018/7/5 上午11:18
  */
-public interface FlyingRequest {
+public interface HttpRequest {
 
     String host();
 
@@ -53,6 +53,6 @@ public interface FlyingRequest {
 
     HttpMethod method();
 
-    FullHttpRequest httpRequest();
+    FullHttpRequest request();
 
 }

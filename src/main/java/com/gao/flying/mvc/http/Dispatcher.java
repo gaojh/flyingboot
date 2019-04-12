@@ -7,7 +7,7 @@ import cn.hutool.core.util.ReUtil;
 import cn.hutool.log.Log;
 import cn.hutool.log.LogFactory;
 import com.fasterxml.jackson.databind.JavaType;
-import com.gao.flying.context.ServerContext;
+import com.gao.flying.context.FlyingContext;
 import com.gao.flying.mvc.Mvcs;
 import com.gao.flying.mvc.annotation.PathParam;
 import com.gao.flying.mvc.annotation.RequestBody;
@@ -48,42 +48,42 @@ public enum Dispatcher {
     private static final Log log = LogFactory.get();
 
 
-    public void execute(ServerContext serverContext, FlyingRequest flyingRequest, FlyingResponse flyingResponse) throws Exception {
-        Mvcs.request.set(flyingRequest);
-        Mvcs.response.set(flyingResponse);
-        HandlerInterceptorChain interceptorChain = new HandlerInterceptorChain(serverContext.getInterceptors(flyingRequest.url()));
-        CompletableFuture<FlyingResponse> future;
-        RespUtils.sendResponse(flyingRequest, flyingResponse);
+    public void execute(FlyingContext flyingContext, HttpRequest httpRequest, HttpResponse httpResponse) throws Exception {
+        Mvcs.request.set(httpRequest);
+        Mvcs.response.set(httpResponse);
+        HandlerInterceptorChain interceptorChain = new HandlerInterceptorChain(flyingContext.getInterceptors(httpRequest.url()));
+        CompletableFuture<HttpResponse> future;
+        RespUtils.sendResponse(httpRequest, httpResponse);
 
         //拦截
-        if (interceptorChain.applyPreHandle(flyingRequest, flyingResponse)) {
-            HttpMethod httpMethod = flyingRequest.method();
+        if (interceptorChain.applyPreHandle(httpRequest, httpResponse)) {
+            HttpMethod httpMethod = httpRequest.method();
             if (httpMethod.equals(HttpMethod.GET)) {
                 //是否是静态资源
-                if (isStaticResource(flyingRequest.url()) || "/".equals(flyingRequest.url())) {
-                    FullHttpResponse resp = getStaticResource(flyingRequest.httpRequest(), flyingRequest.url());
-                    future = CompletableFuture.completedFuture(flyingResponse.success(true).data(resp));
+                if (isStaticResource(httpRequest.url()) || "/".equals(httpRequest.url())) {
+                    FullHttpResponse resp = getStaticResource(httpRequest.request(), httpRequest.url());
+                    future = CompletableFuture.completedFuture(httpResponse.success(true).data(resp));
                 } else {
-                    future = doGet(serverContext, flyingRequest, flyingResponse);
+                    future = doGet(flyingContext, httpRequest, httpResponse);
                 }
             } else if (httpMethod.equals(HttpMethod.POST)) {
-                future = doPost(serverContext, flyingRequest, flyingResponse);
+                future = doPost(flyingContext, httpRequest, httpResponse);
             } else {
-                future = CompletableFuture.completedFuture(flyingResponse.success(false).msg("不支持该method").httpResponseStatus(HttpResponseStatus.BAD_REQUEST));
+                future = CompletableFuture.completedFuture(httpResponse.success(false).msg("不支持该method").httpResponseStatus(HttpResponseStatus.BAD_REQUEST));
             }
         } else {
-            future = CompletableFuture.completedFuture(flyingResponse.success(false).msg("已拦截").httpResponseStatus(HttpResponseStatus.OK));
+            future = CompletableFuture.completedFuture(httpResponse.success(false).msg("已拦截").httpResponseStatus(HttpResponseStatus.OK));
         }
 
         future.thenApply(resp -> {
             try {
-                interceptorChain.applyPostHandle(flyingRequest, resp);
+                interceptorChain.applyPostHandle(httpRequest, resp);
             } catch (Exception e) {
                 e.printStackTrace();
             }
             return resp;
-        }).thenAccept(resp -> RespUtils.sendResponse(flyingRequest, resp)).thenRun(() -> {
-            ReferenceCountUtil.release(flyingRequest.httpRequest());
+        }).thenAccept(resp -> RespUtils.sendResponse(httpRequest, resp)).thenRun(() -> {
+            ReferenceCountUtil.release(httpRequest.request());
             Mvcs.request.remove();
             Mvcs.response.remove();
         });
@@ -91,58 +91,58 @@ public enum Dispatcher {
 
     }
 
-    private CompletableFuture<FlyingResponse> doGet(ServerContext serverContext, FlyingRequest flyingRequest, FlyingResponse flyingResponse) {
-        FlyingRoute flyingRoute = serverContext.fetchGetRoute(flyingRequest.url());
-        Method method = flyingRoute.getMethod();
+    private CompletableFuture<HttpResponse> doGet(FlyingContext flyingContext, HttpRequest httpRequest, HttpResponse httpResponse) {
+        HttpRoute httpRoute = flyingContext.fetchGetRoute(httpRequest.url());
+        Method method = httpRoute.getMethod();
         Parameter[] params = method.getParameters();
         String[] parameterNames = ClassUtils.getMethodParamNames(method);
 
         Object[] values = new Object[params.length];
-        setParamsValue(flyingRequest, flyingResponse, flyingRoute, params, parameterNames, values);
+        setParamsValue(httpRequest, httpResponse, httpRoute, params, parameterNames, values);
 
-        return invoke(serverContext, flyingResponse, flyingRoute, method, values);
+        return invoke(flyingContext, httpResponse, httpRoute, method, values);
 
     }
 
-    private void setParamsValue(FlyingRequest flyingRequest, FlyingResponse flyingResponse, FlyingRoute flyingRoute, Parameter[] params, String[] parameterNames, Object[] values) {
+    private void setParamsValue(HttpRequest httpRequest, HttpResponse httpResponse, HttpRoute httpRoute, Parameter[] params, String[] parameterNames, Object[] values) {
         for (int i = 0; i < params.length; i++) {
             Parameter parameter = params[i];
             RequestParam requestParam = parameter.getAnnotation(RequestParam.class);
             PathParam pathParam = parameter.getAnnotation(PathParam.class);
-            setValue(flyingRequest, flyingResponse, flyingRoute, parameterNames, values, i, parameter, requestParam, pathParam);
+            setValue(httpRequest, httpResponse, httpRoute, parameterNames, values, i, parameter, requestParam, pathParam);
         }
     }
 
-    private void setValue(FlyingRequest flyingRequest, FlyingResponse flyingResponse, FlyingRoute flyingRoute, String[] parameterNames, Object[] values, int i, Parameter parameter, RequestParam requestParam, PathParam pathParam) {
+    private void setValue(HttpRequest httpRequest, HttpResponse httpResponse, HttpRoute httpRoute, String[] parameterNames, Object[] values, int i, Parameter parameter, RequestParam requestParam, PathParam pathParam) {
         if (requestParam != null) {
             String name = StringUtils.isBlank(requestParam.value()) ? parameterNames[i] : requestParam.value();
-            List<String> value = flyingRequest.parameters().get(name);
+            List<String> value = httpRequest.parameters().get(name);
             if (value == null) {
                 log.info("缺少参数名为{}的值！设为null！", name);
             } else {
                 values[i] = getRealValue(parameter, value);
             }
-        } else if (parameter.getType().isAssignableFrom(FlyingRequest.class)) {
-            values[i] = flyingRequest;
-        } else if (parameter.getType().isAssignableFrom(FlyingResponse.class)) {
-            values[i] = flyingResponse;
+        } else if (parameter.getType().isAssignableFrom(HttpRequest.class)) {
+            values[i] = httpRequest;
+        } else if (parameter.getType().isAssignableFrom(HttpResponse.class)) {
+            values[i] = httpResponse;
         } else if (pathParam != null) {
-            Map<String, String> map = PathMatcher.me.extractUriTemplateVariables(flyingRoute.getUrlMapping(), flyingRequest.url());
+            Map<String, String> map = PathMatcher.me.extractUriTemplateVariables(httpRoute.getUrlMapping(), httpRequest.url());
             values[i] = Convert.convert(parameter.getType(), map.get(parameterNames[i]));
         } else {
             values[i] = "null";
         }
     }
 
-    private CompletableFuture<FlyingResponse> doPost(ServerContext serverContext, FlyingRequest flyingRequest, FlyingResponse flyingResponse) {
-        FlyingRoute flyingRoute = serverContext.fetchPostRoute(flyingRequest.url());
-        Method method = flyingRoute.getMethod();
+    private CompletableFuture<HttpResponse> doPost(FlyingContext flyingContext, HttpRequest httpRequest, HttpResponse httpResponse) {
+        HttpRoute httpRoute = flyingContext.fetchPostRoute(httpRequest.url());
+        Method method = httpRoute.getMethod();
         Parameter[] params = method.getParameters();
         Type[] types = method.getGenericParameterTypes();
         Object[] values = new Object[params.length];
         String[] parameterNames = ClassUtils.getMethodParamNames(method);
 
-        if (flyingRequest.isJsonRequest()) {
+        if (httpRequest.isJsonRequest()) {
             for (int i = 0; i < params.length; i++) {
                 Parameter parameter = params[i];
                 RequestBody requestBody = parameter.getAnnotation(RequestBody.class);
@@ -151,33 +151,33 @@ public enum Dispatcher {
                 if (requestBody != null) {
                     //json转换为此对象
                     Type type = types[i];
-                    if (flyingRequest.body() == null) {
-                        return CompletableFuture.completedFuture(flyingResponse.success(false).msg("入参为空").httpResponseStatus(HttpResponseStatus.BAD_REQUEST));
+                    if (httpRequest.body() == null) {
+                        return CompletableFuture.completedFuture(httpResponse.success(false).msg("入参为空").httpResponseStatus(HttpResponseStatus.BAD_REQUEST));
                     }
                     JavaType javaType = JsonTools.DEFAULT.getMapper().getTypeFactory().constructType(type);
-                    values[i] = JsonTools.DEFAULT.fromJson(flyingRequest.body(), javaType);
+                    values[i] = JsonTools.DEFAULT.fromJson(httpRequest.body(), javaType);
                 } else {
-                    setValue(flyingRequest, flyingResponse, flyingRoute, parameterNames, values, i, parameter, requestParam, pathParam);
+                    setValue(httpRequest, httpResponse, httpRoute, parameterNames, values, i, parameter, requestParam, pathParam);
                 }
             }
         } else {
-            setParamsValue(flyingRequest, flyingResponse, flyingRoute, params, parameterNames, values);
+            setParamsValue(httpRequest, httpResponse, httpRoute, params, parameterNames, values);
         }
 
-        return invoke(serverContext, flyingResponse, flyingRoute, method, values);
+        return invoke(flyingContext, httpResponse, httpRoute, method, values);
     }
 
-    private CompletableFuture<FlyingResponse> invoke(ServerContext serverContext, FlyingResponse flyingResponse, FlyingRoute config, Method method, Object[] values) {
+    private CompletableFuture<HttpResponse> invoke(FlyingContext flyingContext, HttpResponse httpResponse, HttpRoute config, Method method, Object[] values) {
         return CompletableFuture.supplyAsync(() -> {
             try {
                 Object result = method.invoke(config.getObject(), values);
-                flyingResponse.data(result);
+                httpResponse.data(result);
             } catch (Exception e) {
                 log.error(e);
-                flyingResponse.msg(e.getCause().getMessage()).success(false);
+                httpResponse.msg(e.getCause().getMessage()).success(false);
             }
-            return flyingResponse;
-        }, serverContext.getExecutorService());
+            return httpResponse;
+        }, flyingContext.getExecutorService());
     }
 
     private boolean isStaticResource(String requestURI) {
