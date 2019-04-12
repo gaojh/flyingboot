@@ -1,10 +1,8 @@
 package com.gao.flying.context;
 
-import cn.hutool.core.thread.ThreadUtil;
 import cn.hutool.core.util.ClassUtil;
 import cn.hutool.core.util.ReflectUtil;
 import cn.hutool.core.util.StrUtil;
-import com.gao.flying.FlyingConst;
 import com.gao.flying.config.ApplicationConfig;
 import com.gao.flying.config.ApplicationEnvironment;
 import com.gao.flying.ioc.annotation.Autowired;

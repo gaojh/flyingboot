@@ -1,6 +1,5 @@
 package com.gao.flying.mvc.utils;
 
-import com.gao.flying.context.FlyingContext;
 import com.gao.flying.mvc.http.HttpRequest;
 import com.gao.flying.mvc.http.HttpResponse;
 import com.gao.flying.server.context.HttpContext;
