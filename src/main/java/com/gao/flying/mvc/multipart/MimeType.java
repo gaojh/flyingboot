@@ -7,7 +7,7 @@ public interface MimeType {
 
     String APPLICATION = "application/octet-stream";
 
-    Map<String, String> mimeTypes = new HashMap<String, String>() {{
+    Map<String, String> MIME_TYPES = new HashMap<String, String>() {{
         put("kar", "audio/midi");
         put("mid", "audio/midi");
         put("midi", "audio/midi");
@@ -172,7 +172,7 @@ public interface MimeType {
      * @return return file MimeType
      */
     static String get(String ext) {
-        return mimeTypes.getOrDefault(ext, APPLICATION);
+        return MIME_TYPES.getOrDefault(ext, APPLICATION);
     }
 
 }
