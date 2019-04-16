@@ -1,5 +1,6 @@
 package com.gao.flying.server.context;
 
+import com.gao.flying.mvc.Mvcs;
 import com.gao.flying.mvc.http.FlyingHttpRequest;
 import com.gao.flying.mvc.http.FlyingHttpResponse;
 import com.gao.flying.mvc.http.HttpRequest;
@@ -37,6 +38,8 @@ public class HttpContext {
         this.ctx = ctx;
         this.request = request;
         this.httpRequest = new FlyingHttpRequest(request, ctx);
-        this.httpResponse = new FlyingHttpResponse();
+        this.httpResponse = FlyingHttpResponse.buildSuccess(ctx);
+        Mvcs.request.set(this.httpRequest);
+        Mvcs.response.set(this.httpResponse);
     }
 }

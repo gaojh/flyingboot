@@ -15,4 +15,7 @@ public class ApplicationConfig {
      * 默认web端口
      */
     public static Integer PORT = 8080;
+
+
+
 }

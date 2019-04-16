@@ -6,6 +6,7 @@ import cn.hutool.core.io.IoUtil;
 import cn.hutool.core.util.StrUtil;
 import com.gao.flying.context.ApplicationContext;
 import com.gao.flying.context.ApplicationUtil;
+import com.gao.flying.mvc.Mvcs;
 import com.gao.flying.mvc.interceptor.HandlerInterceptorChain;
 import com.gao.flying.mvc.utils.MimeTypeUtils;
 import com.gao.flying.mvc.utils.RespUtils;
@@ -55,7 +56,13 @@ public class FlyingHttpDispatcher implements HttpDispatcher {
         } else {
             if (interceptorChain.applyPreHandle(httpRequest, httpResponse)) {
                 HttpRoute httpRoute = applicationContext.getHttpRoute(url);
-                future = httpRouter.route(httpContext, httpRoute);
+
+                if (httpRoute == null) {
+                    httpResponse.success(false).httpResponseStatus(HttpResponseStatus.BAD_REQUEST).msg("没有配置对应的路由：" + url);
+                    future = CompletableFuture.completedFuture(httpContext);
+                } else {
+                    future = httpRouter.route(httpContext, httpRoute);
+                }
             } else {
                 httpResponse.success(false).msg("已拦截").httpResponseStatus(HttpResponseStatus.OK);
                 future = CompletableFuture.completedFuture(httpContext);
@@ -69,15 +76,15 @@ public class FlyingHttpDispatcher implements HttpDispatcher {
                 e.printStackTrace();
             }
             return context;
-        }).thenAccept(RespUtils::sendResponse).thenRun(() -> ReferenceCountUtil.release(httpRequest.request()));
+        }).thenAccept(RespUtils::sendResponse).thenRun(() -> {
+            Mvcs.request.remove();
+            Mvcs.response.remove();
+            ReferenceCountUtil.release(httpRequest.request());
+        });
 
     }
 
     private FullHttpResponse getStaticResource(FullHttpRequest request, String requestURI) {
-        if (null == requestURI || requestURI.isEmpty() || "/".equals(requestURI)) {
-            requestURI = "/index.html";
-        }
-
         byte[] bytes = cache.get(requestURI);
         if (null == bytes) {
             InputStream is = this.getClass().getResourceAsStream("/public" + requestURI);

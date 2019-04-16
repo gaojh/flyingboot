@@ -27,6 +27,7 @@ public class MimeTypeUtils {
 
         map.put("svg", "text/xml");
         map.put("xml", "text/xml");
+        map.put("html", "text/html;charset=UTF-8");
     }
 
     public static String getContentType(String url) {
@@ -37,6 +38,6 @@ public class MimeTypeUtils {
                 return contentType;
             }
         }
-        return "text/plain; charset=UTF-8";
+        return "text/plain;charset=UTF-8";
     }
 }

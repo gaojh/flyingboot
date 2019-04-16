@@ -43,6 +43,9 @@ public class FlyingHttpRequest implements HttpRequest {
     private void init(FullHttpRequest httpRequest) {
         QueryStringDecoder decoder = new QueryStringDecoder(httpRequest.uri());
         this.url = decoder.path();
+        if (null == this.url || this.url.isEmpty() || "/".equals(this.url)) {
+            this.url = "/index.html";
+        }
         this.parameters.putAll(decoder.parameters());
 
         HttpHeaders httpHeaders = httpRequest.headers();

@@ -13,13 +13,22 @@ import io.netty.handler.codec.http.*;
  */
 public class RespUtils {
 
-    public static void sendResponse(HttpContext httpContext){
+    public static void sendResponse(HttpContext httpContext) {
         HttpResponse response = httpContext.getHttpResponse();
-        if (HttpUtil.isKeepAlive(httpContext.getHttpRequest().request())) {
-            httpContext.getCtx().writeAndFlush(buildHttpResponse(response.data(), HttpResponseStatus.OK));
+        if (response.success()) {
+            if (HttpUtil.isKeepAlive(httpContext.getHttpRequest().request())) {
+                httpContext.getCtx().writeAndFlush(buildHttpResponse(response.data(), HttpResponseStatus.OK));
+            } else {
+                httpContext.getCtx().writeAndFlush(buildHttpResponse(response.data(), HttpResponseStatus.OK)).addListener(ChannelFutureListener.CLOSE);
+            }
         } else {
-            httpContext.getCtx().writeAndFlush(buildHttpResponse(response.data(), HttpResponseStatus.OK)).addListener(ChannelFutureListener.CLOSE);
+            if (HttpUtil.isKeepAlive(httpContext.getHttpRequest().request())) {
+                httpContext.getCtx().writeAndFlush(buildHttpResponse(response.msg() + "," + response.data(), response.httpResponseStatus()));
+            } else {
+                httpContext.getCtx().writeAndFlush(buildHttpResponse(response.msg() + "," + response.data(), response.httpResponseStatus())).addListener(ChannelFutureListener.CLOSE);
+            }
         }
+
     }
 
 

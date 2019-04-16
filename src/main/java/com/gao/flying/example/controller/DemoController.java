@@ -1,8 +1,10 @@
 package com.gao.flying.example.controller;
 
+import com.gao.flying.example.bean.DemoBean;
 import com.gao.flying.example.service.DemoService;
 import com.gao.flying.ioc.annotation.Autowired;
 import com.gao.flying.mvc.annotation.Controller;
+import com.gao.flying.mvc.annotation.RequestBody;
 import com.gao.flying.mvc.annotation.RequestMapping;
 import com.gao.flying.mvc.annotation.RequestParam;
 
@@ -20,5 +22,10 @@ public class DemoController {
     @RequestMapping
     public String hello(@RequestParam String name){
         return demoService.getName(name);
+    }
+
+    @RequestMapping("/demo")
+    public Object demo(@RequestBody DemoBean demoBean){
+        return demoBean;
     }
 }
