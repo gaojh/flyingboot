@@ -16,6 +16,12 @@ public class ApplicationConfig {
      */
     public static Integer PORT = 8080;
 
+    /**
+     * 连接池相关
+     */
+    public static Integer THREAD_POOL_CORE_SIZE = 600;
+    public static Integer THREAD_POOL_MAX_SIZE = 2000;
+    public static Long THREAD_POOL_KEEPALIVETIME = 0L;
 
 
 }

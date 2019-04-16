@@ -3,7 +3,9 @@ package com.gao.flying.mvc.http;
 import cn.hutool.cache.Cache;
 import cn.hutool.cache.CacheUtil;
 import cn.hutool.core.io.IoUtil;
+import cn.hutool.core.thread.ThreadFactoryBuilder;
 import cn.hutool.core.util.StrUtil;
+import com.gao.flying.config.ApplicationConfig;
 import com.gao.flying.context.ApplicationContext;
 import com.gao.flying.context.ApplicationUtil;
 import com.gao.flying.mvc.Mvcs;
@@ -14,12 +16,13 @@ import com.gao.flying.server.context.HttpContext;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.*;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.DefaultThreadFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.InputStream;
 import java.nio.charset.Charset;
-import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.*;
 
 /**
  * @author 高建华
@@ -30,16 +33,17 @@ public class FlyingHttpDispatcher implements HttpDispatcher {
     private static final Logger logger = LoggerFactory.getLogger(FlyingHttpDispatcher.class);
     private HttpRouter httpRouter;
     private ApplicationContext applicationContext;
+    /**
+     * 页面缓存，默认1000条
+     */
+    private Cache<String, byte[]> cache = CacheUtil.newLFUCache(1000);
 
     public FlyingHttpDispatcher() {
         httpRouter = new FlyingHttpRouter();
         applicationContext = ApplicationUtil.getApplicationContext();
     }
 
-    /**
-     * 页面缓存，默认1000条
-     */
-    private Cache<String, byte[]> cache = CacheUtil.newLFUCache(1000);
+
 
     @Override
     public void doDispatcher(HttpContext httpContext) throws Exception {

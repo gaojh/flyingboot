@@ -3,6 +3,8 @@ package com.gao.flying.mvc.http;
 import cn.hutool.core.convert.Convert;
 import cn.hutool.core.util.ReflectUtil;
 import com.fasterxml.jackson.databind.JavaType;
+import com.gao.flying.context.ApplicationContext;
+import com.gao.flying.context.ApplicationUtil;
 import com.gao.flying.mvc.annotation.PathParam;
 import com.gao.flying.mvc.annotation.RequestBody;
 import com.gao.flying.mvc.annotation.RequestMapping;
@@ -21,6 +23,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
 
 /**
  * @author 高建华
@@ -29,9 +32,12 @@ import java.util.concurrent.CompletableFuture;
 public class FlyingHttpRouter implements HttpRouter {
 
     private static final Logger logger = LoggerFactory.getLogger(FlyingHttpRouter.class);
+    private ExecutorService executorService;
 
     @Override
     public CompletableFuture<HttpContext> route(HttpContext httpContext, HttpRoute httpRoute) throws Exception {
+        ApplicationContext applicationContext = ApplicationUtil.getApplicationContext();
+        this.executorService = applicationContext.getExecutorService();
         setParams(httpContext, httpRoute);
         return invoke(httpContext, httpRoute);
     }
@@ -96,7 +102,7 @@ public class FlyingHttpRouter implements HttpRouter {
             Object result = ReflectUtil.invoke(httpRoute.getObject(), httpRoute.getMethod(), httpRoute.getParams());
             httpContext.getHttpResponse().data(result);
             return httpContext;
-        });
+        }, executorService);
     }
 
 }

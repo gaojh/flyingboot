@@ -18,6 +18,7 @@ import com.gao.flying.mvc.http.HttpRoute;
 import com.gao.flying.mvc.interceptor.HandlerInterceptor;
 import com.gao.flying.mvc.utils.ClassUtils;
 import com.gao.flying.mvc.utils.PathMatcher;
+import io.netty.util.concurrent.DefaultThreadFactory;
 import lombok.Getter;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -26,8 +27,7 @@ import org.slf4j.LoggerFactory;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
+import java.util.concurrent.*;
 
 /**
  * @author 高建华
@@ -44,13 +44,22 @@ public class ApplicationContext {
     private static ConcurrentHashMap<String, BeanDefine> initBeanDefineMap = new ConcurrentHashMap<>();
 
     private TreeMap<Integer, ApplicationRunner> setupMap = new TreeMap<>();
-    private ConcurrentHashMap<String, HandlerInterceptor> interceptorMap = new ConcurrentHashMap<>();
+    private ConcurrentHashMap<String, List<HandlerInterceptor>> interceptorMap = new ConcurrentHashMap<>();
+
+    private ExecutorService executorService;
+
 
     @Getter
     private ApplicationEnvironment environment;
 
     public ApplicationContext(ApplicationEnvironment environment) {
         this.environment = environment;
+        executorService = new ThreadPoolExecutor(ApplicationConfig.THREAD_POOL_CORE_SIZE,
+                ApplicationConfig.THREAD_POOL_MAX_SIZE,
+                ApplicationConfig.THREAD_POOL_KEEPALIVETIME,
+                TimeUnit.SECONDS,
+                new SynchronousQueue<>(),
+                new DefaultThreadFactory("Flying-pool"));
 
         try {
             initBeans();
@@ -62,14 +71,32 @@ public class ApplicationContext {
         }
     }
 
+    /**
+     * 获取通用连接池
+     * @return
+     */
+    public ExecutorService getExecutorService() {
+        return executorService;
+    }
 
+    /**
+     * 根据请求地址获取路由信息
+     *
+     * @param url 请求url
+     * @return
+     */
     public HttpRoute getHttpRoute(String url) {
         HttpRoute httpRoute = routeMap.get(url);
         if (httpRoute == null) {
             Optional<HttpRoute> optional = routeMap.entrySet().stream().filter(entry -> PathMatcher.me.isPattern(entry.getKey()) && PathMatcher.me.match(entry.getKey(), url)).map(Map.Entry::getValue).findFirst();
             if (optional.isPresent()) {
                 httpRoute = optional.get();
+
+                //直接存起来，下次直接拿，提高效率
+                routeMap.put(url, httpRoute);
             }
+
+
         }
         return httpRoute;
     }
@@ -83,8 +110,20 @@ public class ApplicationContext {
         return list;
     }
 
+    /**
+     * 根据请求路径获取过滤器列表
+     *
+     * @param path
+     * @return
+     */
     public List<HandlerInterceptor> getInterceptor(String path) {
-        return interceptorMap.entrySet().stream().filter(entry -> PathMatcher.me.match(entry.getKey(), path)).map(Map.Entry::getValue).collect(Collectors.toList());
+        List<HandlerInterceptor> list = interceptorMap.get(path);
+        if (list == null) {
+            Optional<List<HandlerInterceptor>> optional = interceptorMap.entrySet().stream().filter(entry -> PathMatcher.me.isPattern(entry.getKey()) && PathMatcher.me.match(entry.getKey(), path)).map(Map.Entry::getValue).findFirst();
+            list = optional.orElse(Collections.emptyList());
+        }
+
+        return list;
     }
 
 
@@ -136,7 +175,6 @@ public class ApplicationContext {
         }
 
         if (beanDefineMap.containsKey(name)) {
-            logger.debug("{}已经初始化，跳过！", name);
             return beanDefineMap.get(name);
         }
 
@@ -144,13 +182,12 @@ public class ApplicationContext {
         if (interfaces.length > 0) {
             for (Class<?> interfaceClazz : interfaces) {
                 if (beanDefineMap.containsKey(interfaceClazz.getName())) {
-                    logger.debug("{}已经初始化，跳过！", name);
                     beanDefineMap.put(name, beanDefineMap.get(interfaceClazz.getName()));
                     return beanDefineMap.get(name);
                 }
             }
         }
-        logger.debug("初始化：{}", name);
+
         Object obj = null;
         try {
             obj = clazz.newInstance();
@@ -180,7 +217,7 @@ public class ApplicationContext {
         for (Class clazz : controllers) {
             Controller controller = (Controller) clazz.getAnnotation(Controller.class);
             String name = StrUtil.isBlank(controller.value()) ? clazz.getName() : controller.value();
-
+            logger.debug("初始化：{}", name);
             RequestMapping c = (RequestMapping) clazz.getAnnotation(RequestMapping.class);
             String[] ctrlPath = c == null ? new String[]{"/"} : c.value();
             Object obj = beanDefineMap.get(name).getBean();
@@ -229,7 +266,6 @@ public class ApplicationContext {
             Value value = field.getAnnotation(Value.class);
             String fieldName = field.getType().getName();
             if (autowired != null) {
-                logger.debug("设置Field：{}", fieldName);
                 BeanDefine fieldObj = initBeanDefineMap.get(fieldName);
                 if (fieldObj == null) {
                     fieldObj = createBean(beanClassMap.get(fieldName));
@@ -265,7 +301,9 @@ public class ApplicationContext {
             HandlerInterceptor obj = (HandlerInterceptor) clazz.newInstance();
             for (String path : interceptor.pathPatterns()) {
                 if (StringUtils.isNotBlank(path)) {
-                    interceptorMap.put(path, obj);
+                    List<HandlerInterceptor> list = interceptorMap.getOrDefault(path, new ArrayList<>());
+                    list.add(obj);
+                    interceptorMap.put(path, list);
                 }
             }
 

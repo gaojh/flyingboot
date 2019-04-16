@@ -4,7 +4,7 @@ import cn.hutool.core.thread.NamedThreadFactory;
 import cn.hutool.log.Log;
 import cn.hutool.log.LogFactory;
 import com.gao.flying.config.ApplicationConfig;
-import com.gao.flying.server.handler.HttpServerHandler2;
+import com.gao.flying.server.handler.HttpServerHandler;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.*;
@@ -59,7 +59,7 @@ public class HttpServer {
                         .addLast("support-aggregator", new HttpObjectAggregator(1024 * 1024))
                         .addLast("encoder", new HttpResponseEncoder())
                         .addLast("chunk", new ChunkedWriteHandler())
-                        .addLast("business-handler", new HttpServerHandler2());
+                        .addLast("business-handler", new HttpServerHandler());
             }
         });
     }

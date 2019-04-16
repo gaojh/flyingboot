@@ -12,11 +12,11 @@ import io.netty.handler.codec.http.FullHttpRequest;
  * @author 高建华
  * @date 2019-03-30 22:40
  */
-public class HttpServerHandler2 extends ChannelInboundHandlerAdapter {
+public class HttpServerHandler extends ChannelInboundHandlerAdapter {
 
     private HttpDispatcher httpDispatcher;
 
-    public HttpServerHandler2() {
+    public HttpServerHandler() {
         httpDispatcher = new FlyingHttpDispatcher();
     }
 

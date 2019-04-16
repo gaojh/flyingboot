@@ -23,9 +23,9 @@ public class RespUtils {
             }
         } else {
             if (HttpUtil.isKeepAlive(httpContext.getHttpRequest().request())) {
-                httpContext.getCtx().writeAndFlush(buildHttpResponse(response.msg() + "," + response.data(), response.httpResponseStatus()));
+                httpContext.getCtx().writeAndFlush(buildHttpResponse(response.msg(), response.httpResponseStatus()));
             } else {
-                httpContext.getCtx().writeAndFlush(buildHttpResponse(response.msg() + "," + response.data(), response.httpResponseStatus())).addListener(ChannelFutureListener.CLOSE);
+                httpContext.getCtx().writeAndFlush(buildHttpResponse(response.msg(), response.httpResponseStatus())).addListener(ChannelFutureListener.CLOSE);
             }
         }
 
