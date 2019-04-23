@@ -1,5 +1,6 @@
 package com.gao.flying.context;
 
+import cn.hutool.core.convert.Convert;
 import cn.hutool.core.util.ClassUtil;
 import cn.hutool.core.util.ReflectUtil;
 import cn.hutool.core.util.StrUtil;
@@ -24,10 +25,13 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.stream.Collectors;
 
 /**
  * @author 高建华
@@ -73,6 +77,7 @@ public class ApplicationContext {
 
     /**
      * 获取通用连接池
+     *
      * @return
      */
     public ExecutorService getExecutorService() {
@@ -189,11 +194,28 @@ public class ApplicationContext {
         }
 
         Object obj = null;
-        try {
-            obj = clazz.newInstance();
-        } catch (InstantiationException | IllegalAccessException e) {
-            e.printStackTrace();
+
+        //构造函数注入
+        List<Constructor> constructorList = Arrays.stream(clazz.getConstructors()).filter(constructor -> constructor.isAnnotationPresent(Autowired.class)).collect(Collectors.toList());
+        if (constructorList.size() == 0) {
+            try {
+                obj = clazz.newInstance();
+            } catch (InstantiationException | IllegalAccessException e) {
+                e.printStackTrace();
+            }
+        } else if (constructorList.size() == 1) {
+            logger.debug("使用构造函数实例化对象：{}", clazz.getName());
+            Constructor constructor = constructorList.get(0);
+            try {
+                obj = constructor.newInstance(getConstractorParameters(constructor));
+            } catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
+                e.printStackTrace();
+            }
+
+        } else {
+            throw new RuntimeException("Autowried只能注入一个构造方法");
         }
+
         BeanDefine beanDefine = new BeanDefine(obj);
 
         initBeanDefineMap.put(name, beanDefine);
@@ -290,6 +312,20 @@ public class ApplicationContext {
         }
     }
 
+    private Object[] getConstractorParameters(Constructor constructor) {
+        Class[] parameters = constructor.getParameterTypes();
+        return Arrays.stream(parameters).map(cls -> {
+            String parameterName = cls.getName();
+            BeanDefine beanDefine = initBeanDefineMap.get(parameterName);
+            if (beanDefine == null) {
+                beanDefine = createBean(beanClassMap.get(parameterName));
+                beanDefineMap.put(parameterName, beanDefine);
+            }
+            return Convert.convert(beanDefine.getType(), beanDefine.getBean());
+        }).toArray();
+    }
+
+
     private void initInterceptor() throws Exception {
         logger.debug("开始初始化Interceptor");
         Set<Class<?>> interceptors = new HashSet<>();
@@ -320,13 +356,18 @@ public class ApplicationContext {
             setups.addAll(ClassUtil.scanPackageByAnnotation(basePkg, Setup.class));
         }
         for (Class<?> clazz : setups) {
-            Setup setup = clazz.getAnnotation(Setup.class);
-            ApplicationRunner obj = (ApplicationRunner) clazz.newInstance();
-            setupMap.put(setup.order(), obj);
+            if (clazz.isAnnotationPresent(Component.class)) {
+                BeanDefine beanDefine = beanDefineMap.get(clazz.getName());
+                Setup setup = clazz.getAnnotation(Setup.class);
+                ApplicationRunner obj = (ApplicationRunner) beanDefine.getBean();
+                setupMap.put(setup.order(), obj);
 
-            //设置field
-            Field[] fields = clazz.getDeclaredFields();
-            setFields(clazz, obj, fields);
+                //设置field
+                Field[] fields = clazz.getDeclaredFields();
+                setFields(clazz, obj, fields);
+            } else {
+                logger.debug("Setup: {}，需要添加注解@Commonent", clazz.getName());
+            }
         }
 
     }
