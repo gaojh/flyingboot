@@ -213,7 +213,7 @@ public class ApplicationContext {
             }
 
         } else {
-            throw new RuntimeException("Autowried只能注入一个构造方法");
+            throw new RuntimeException("@Autowried只能注入一个构造方法");
         }
 
         BeanDefine beanDefine = new BeanDefine(obj);
