@@ -29,6 +29,10 @@ public class Environment {
         return props.getStr(key);
     }
 
+    public String getString(String key, String defaultValue) {
+        return props.getStr(key, defaultValue);
+    }
+
     public Integer getInteger(String key) {
         return props.getInt(key);
     }

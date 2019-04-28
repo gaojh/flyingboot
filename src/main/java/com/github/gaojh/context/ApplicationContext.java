@@ -45,7 +45,11 @@ public class ApplicationContext {
     private static ConcurrentHashMap<String, Class<?>> beanClassMap = new ConcurrentHashMap<>();
 
     private static ConcurrentHashMap<String, BeanDefine> beanDefineMap = new ConcurrentHashMap<>();
-    private static ConcurrentHashMap<String, BeanDefine> initBeanDefineMap = new ConcurrentHashMap<>();
+
+    /**
+     * 初始化过程中临时存放
+     */
+    private ConcurrentHashMap<String, BeanDefine> initBeanDefineMap = new ConcurrentHashMap<>();
 
     private TreeMap<Integer, ApplicationRunner> setupMap = new TreeMap<>();
     private ConcurrentHashMap<String, List<HandlerInterceptor>> interceptorMap = new ConcurrentHashMap<>();
@@ -288,7 +292,10 @@ public class ApplicationContext {
             Value value = field.getAnnotation(Value.class);
             String fieldName = field.getType().getName();
             if (autowired != null) {
-                BeanDefine fieldObj = initBeanDefineMap.get(fieldName);
+                BeanDefine fieldObj = beanDefineMap.get(fieldName);
+                if (fieldObj == null) {
+                    fieldObj = initBeanDefineMap.get(fieldName);
+                }
                 if (fieldObj == null) {
                     fieldObj = createBean(beanClassMap.get(fieldName));
                     beanDefineMap.put(fieldName, fieldObj);
@@ -316,7 +323,11 @@ public class ApplicationContext {
         Class[] parameters = constructor.getParameterTypes();
         return Arrays.stream(parameters).map(cls -> {
             String parameterName = cls.getName();
-            BeanDefine beanDefine = initBeanDefineMap.get(parameterName);
+            BeanDefine beanDefine = beanDefineMap.get(parameterName);
+            if (beanDefine == null) {
+                //初始化过程中的
+                beanDefine = initBeanDefineMap.get(parameterName);
+            }
             if (beanDefine == null) {
                 beanDefine = createBean(beanClassMap.get(parameterName));
                 beanDefineMap.put(parameterName, beanDefine);
