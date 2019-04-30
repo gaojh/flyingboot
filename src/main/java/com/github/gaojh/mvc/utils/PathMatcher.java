@@ -317,14 +317,6 @@ public enum PathMatcher {
         return false;
     }
 
-    /**
-     * Tokenize the given path pattern into parts, based on this matcher's settings.
-     * <p>Performs caching based on {@link #setCachePatterns}, delegating to
-     * {@link #tokenizePath(String)} for the actual tokenization algorithm.
-     *
-     * @param pattern the pattern to tokenize
-     * @return the tokenized pattern parts
-     */
     protected String[] tokenizePattern(String pattern) {
         String[] tokenized = null;
         Boolean cachePatterns = this.cachePatterns;
@@ -369,44 +361,16 @@ public enum PathMatcher {
         return tokens.toArray(new String[0]);
     }
 
-    /**
-     * Tokenize the given path String into parts, based on this matcher's settings.
-     *
-     * @param path the path to tokenize
-     * @return the tokenized path parts
-     */
     protected String[] tokenizePath(String path) {
         return tokenizeToStringArray(path, this.pathSeparator, this.trimTokens, true);
     }
 
-
-    /**
-     * Test whether or not a string matches against a pattern.
-     *
-     * @param pattern the pattern to match against (never {@code null})
-     * @param str     the String which must be matched against the pattern (never {@code null})
-     * @return {@code true} if the string matches against the pattern, or {@code false} otherwise
-     */
     private boolean matchStrings(String pattern, String str,
                                  Map<String, String> uriTemplateVariables) {
 
         return getStringMatcher(pattern).matchStrings(str, uriTemplateVariables);
     }
 
-    /**
-     * Build or retrieve an {@link AntPathStringMatcher} for the given pattern.
-     * <p>The default implementation checks this AntPathMatcher's internal cache
-     * (see {@link #setCachePatterns}), creating a new AntPathStringMatcher instance
-     * if no cached copy is found.
-     * <p>When encountering too many patterns to cache at runtime (the threshold is 65536),
-     * it turns the default cache off, assuming that arbitrary permutations of patterns
-     * are coming in, with little chance for encountering a recurring pattern.
-     * <p>This method may be overridden to implement a custom cache strategy.
-     *
-     * @param pattern the pattern to match against (never {@code null})
-     * @return a corresponding AntPathStringMatcher (never {@code null})
-     * @see #setCachePatterns
-     */
     protected AntPathStringMatcher getStringMatcher(String pattern) {
         AntPathStringMatcher matcher = null;
         Boolean cachePatterns = this.cachePatterns;
@@ -429,19 +393,6 @@ public enum PathMatcher {
         return matcher;
     }
 
-    /**
-     * Given a pattern and a full path, determine the pattern-mapped part. <p>For example: <ul>
-     * <li>'{@code /docs/cvs/commit.html}' and '{@code /docs/cvs/commit.html} -> ''</li>
-     * <li>'{@code /docs/*}' and '{@code /docs/cvs/commit} -> '{@code cvs/commit}'</li>
-     * <li>'{@code /docs/cvs/*.html}' and '{@code /docs/cvs/commit.html} -> '{@code commit.html}'</li>
-     * <li>'{@code /docs/**}' and '{@code /docs/cvs/commit} -> '{@code cvs/commit}'</li>
-     * <li>'{@code /docs/**\/*.html}' and '{@code /docs/cvs/commit.html} -> '{@code cvs/commit.html}'</li>
-     * <li>'{@code /*.html}' and '{@code /docs/cvs/commit.html} -> '{@code docs/cvs/commit.html}'</li>
-     * <li>'{@code *.html}' and '{@code /docs/cvs/commit.html} -> '{@code /docs/cvs/commit.html}'</li>
-     * <li>'{@code *}' and '{@code /docs/cvs/commit.html} -> '{@code /docs/cvs/commit.html}'</li> </ul>
-     * <p>Assumes that {@link #match} returns {@code true} for '{@code pattern}' and '{@code path}', but
-     * does <strong>not</strong> enforce this.
-     */
     public String extractPathWithinPattern(String pattern, String path) {
         String[] patternParts = tokenizeToStringArray(pattern, this.pathSeparator, this.trimTokens, true);
         String[] pathParts = tokenizeToStringArray(path, this.pathSeparator, this.trimTokens, true);
@@ -473,35 +424,6 @@ public enum PathMatcher {
         return variables;
     }
 
-    /**
-     * Combine two patterns into a new pattern.
-     * <p>This implementation simply concatenates the two patterns, unless
-     * the first pattern contains a file extension match (e.g., {@code *.html}).
-     * In that case, the second pattern will be merged into the first. Otherwise,
-     * an {@code IllegalArgumentException} will be thrown.
-     * <h3>Examples</h3>
-     * <table border="1">
-     * <tr><th>Pattern 1</th><th>Pattern 2</th><th>Result</th></tr>
-     * <tr><td>{@code null}</td><td>{@code null}</td><td>&nbsp;</td></tr>
-     * <tr><td>/hotels</td><td>{@code null}</td><td>/hotels</td></tr>
-     * <tr><td>{@code null}</td><td>/hotels</td><td>/hotels</td></tr>
-     * <tr><td>/hotels</td><td>/bookings</td><td>/hotels/bookings</td></tr>
-     * <tr><td>/hotels</td><td>bookings</td><td>/hotels/bookings</td></tr>
-     * <tr><td>/hotels/*</td><td>/bookings</td><td>/hotels/bookings</td></tr>
-     * <tr><td>/hotels/&#42;&#42;</td><td>/bookings</td><td>/hotels/&#42;&#42;/bookings</td></tr>
-     * <tr><td>/hotels</td><td>{hotel}</td><td>/hotels/{hotel}</td></tr>
-     * <tr><td>/hotels/*</td><td>{hotel}</td><td>/hotels/{hotel}</td></tr>
-     * <tr><td>/hotels/&#42;&#42;</td><td>{hotel}</td><td>/hotels/&#42;&#42;/{hotel}</td></tr>
-     * <tr><td>/*.html</td><td>/hotels.html</td><td>/hotels.html</td></tr>
-     * <tr><td>/*.html</td><td>/hotels</td><td>/hotels.html</td></tr>
-     * <tr><td>/*.html</td><td>/*.txt</td><td>{@code IllegalArgumentException}</td></tr>
-     * </table>
-     *
-     * @param pattern1 the first pattern
-     * @param pattern2 the second pattern
-     * @return the combination of the two patterns
-     * @throws IllegalArgumentException if the two patterns cannot be combined
-     */
     public String combine(String pattern1, String pattern2) {
         if (StrUtil.isBlank(pattern1) && StrUtil.isBlank(pattern2)) {
             return "";
@@ -644,11 +566,6 @@ public enum PathMatcher {
             return Pattern.quote(s.substring(start, end));
         }
 
-        /**
-         * Main entry point.
-         *
-         * @return {@code true} if the string matches against the pattern, or {@code false} otherwise.
-         */
         public boolean matchStrings(String str, Map<String, String> uriTemplateVariables) {
             Matcher matcher = this.pattern.matcher(str);
             if (matcher.matches()) {

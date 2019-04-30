@@ -41,4 +41,11 @@ public class Environment {
         return props.getInt(key, defaultValue);
     }
 
+    public Boolean getBoolean(String key) {
+        return props.getBool(key);
+    }
+
+    public Boolean getBoolean(String key, Boolean defaultValue) {
+        return props.getBool(key, defaultValue);
+    }
 }

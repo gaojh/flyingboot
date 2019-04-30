@@ -35,6 +35,7 @@ public class BeanCreator extends BeanScanner {
 
     public BeanCreator(Environment environment) {
         this.environment = environment;
+        this.createBeanDefine(environment);
         initBeans();
     }
 
@@ -185,8 +186,8 @@ public class BeanCreator extends BeanScanner {
             BeanDefine beanDefine = beanDefineMap.get(parameterName);
             if (beanDefine == null) {
                 beanDefine = createBeanDefine(c);
-                values.add(beanDefine.getObject());
             }
+            values.add(beanDefine.getObject());
         }
         return values.toArray();
     }
