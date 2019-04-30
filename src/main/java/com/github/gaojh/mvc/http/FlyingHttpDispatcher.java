@@ -1,12 +1,15 @@
 package com.github.gaojh.mvc.http;
 
+import com.github.gaojh.mvc.context.WebContext;
 import com.github.gaojh.mvc.interceptor.HandlerInterceptorChain;
+import com.github.gaojh.mvc.route.FlyingWebRouter;
+import com.github.gaojh.mvc.route.WebRoute;
+import com.github.gaojh.mvc.route.WebRouter;
 import com.github.gaojh.mvc.utils.RespUtils;
 import cn.hutool.cache.Cache;
 import cn.hutool.cache.CacheUtil;
 import cn.hutool.core.io.IoUtil;
 import cn.hutool.core.util.StrUtil;
-import com.github.gaojh.context.ApplicationContext;
 import com.github.gaojh.context.ApplicationUtil;
 import com.github.gaojh.mvc.Mvcs;
 import com.github.gaojh.mvc.utils.MimeTypeUtils;
@@ -28,18 +31,17 @@ import java.util.concurrent.*;
 public class FlyingHttpDispatcher implements HttpDispatcher {
 
     private static final Logger logger = LoggerFactory.getLogger(FlyingHttpDispatcher.class);
-    private HttpRouter httpRouter;
-    private ApplicationContext applicationContext;
+    private WebRouter webRouter;
+    private WebContext webContext;
     /**
      * 页面缓存，默认1000条
      */
     private Cache<String, byte[]> cache = CacheUtil.newLFUCache(1000);
 
     public FlyingHttpDispatcher() {
-        httpRouter = new FlyingHttpRouter();
-        applicationContext = ApplicationUtil.getApplicationContext();
+        webRouter = new FlyingWebRouter();
+        webContext = ApplicationUtil.getWebContext();
     }
-
 
 
     @Override
@@ -48,25 +50,24 @@ public class FlyingHttpDispatcher implements HttpDispatcher {
         HttpResponse httpResponse = httpContext.getHttpResponse();
         String url = httpRequest.url();
         CompletableFuture<HttpContext> future;
-        HandlerInterceptorChain interceptorChain = new HandlerInterceptorChain(applicationContext.getInterceptor(url));
+        HandlerInterceptorChain interceptorChain = new HandlerInterceptorChain(webContext.getInterceptor(url));
 
         if (StrUtil.contains(url, '.')) {
             //认为是静态资源
             httpResponse.success(true).data(getStaticResource(httpRequest.request(), url));
             future = CompletableFuture.completedFuture(httpContext);
         } else {
-            if (interceptorChain.applyPreHandle(httpRequest, httpResponse)) {
-                HttpRoute httpRoute = applicationContext.getHttpRoute(url);
-
-                if (httpRoute == null) {
-                    httpResponse.success(false).httpResponseStatus(HttpResponseStatus.BAD_REQUEST).msg("没有配置对应的路由：" + url);
-                    future = CompletableFuture.completedFuture(httpContext);
-                } else {
-                    future = httpRouter.route(httpContext, httpRoute);
-                }
-            } else {
-                httpResponse.success(false).msg("已拦截").httpResponseStatus(HttpResponseStatus.OK);
+            WebRoute webRoute = webContext.getRoute(url);
+            if (webRoute == null) {
+                httpResponse.success(false).httpResponseStatus(HttpResponseStatus.BAD_REQUEST).msg("没有配置对应的路由：" + url);
                 future = CompletableFuture.completedFuture(httpContext);
+            } else {
+                if (interceptorChain.applyPreHandle(httpRequest, httpResponse)) {
+                    future = webRouter.invoke(httpContext, webRoute);
+                } else {
+                    httpResponse.success(false).msg("已拦截").httpResponseStatus(HttpResponseStatus.OK);
+                    future = CompletableFuture.completedFuture(httpContext);
+                }
             }
         }
 

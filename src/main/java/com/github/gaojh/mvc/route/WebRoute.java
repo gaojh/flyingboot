@@ -1,6 +1,6 @@
-package com.github.gaojh.mvc.http;
+package com.github.gaojh.mvc.route;
 
-import com.github.gaojh.mvc.annotation.RequestMapping;
+import com.github.gaojh.mvc.annotation.RequestMethod;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -14,7 +14,7 @@ import java.lang.reflect.Method;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class HttpRoute {
+public class WebRoute {
     /**
      * controller的instance
      */
@@ -22,15 +22,16 @@ public class HttpRoute {
     private Object object;
     private Method method;
     private String urlMapping;
-    private RequestMapping.METHOD httpMethod;
+    private RequestMethod[] requestMethod;
 
     private String[] paramNames;
     private Object[] params;
 
-    public HttpRoute(Class type, Object object, Method method, String urlMapping) {
+    public WebRoute(Class type, Object object, Method method, String urlMapping,RequestMethod[] requestMethod) {
         this.type = type;
         this.object = object;
         this.method = method;
         this.urlMapping = urlMapping;
+        this.requestMethod = requestMethod;
     }
 }

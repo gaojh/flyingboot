@@ -1,5 +1,6 @@
 package com.github.gaojh.ioc.bean;
 
+import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -9,17 +10,18 @@ import lombok.NoArgsConstructor;
  */
 @Data
 @NoArgsConstructor
+@AllArgsConstructor
 public class BeanDefine {
 
-    private Object bean;
     private Class<?> type;
+    private Object object;
 
-    public BeanDefine(Object bean) {
-        this(bean, bean.getClass());
+    public BeanDefine(Object object) {
+        this(object, object.getClass());
     }
 
-    public BeanDefine(Object bean, Class<?> type) {
-        this.bean = bean;
+    public BeanDefine(Object object, Class<?> type) {
+        this.object = object;
         this.type = type;
     }
 

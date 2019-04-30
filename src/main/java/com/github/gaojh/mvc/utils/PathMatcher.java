@@ -1,6 +1,6 @@
 package com.github.gaojh.mvc.utils;
 
-import org.apache.commons.lang3.StringUtils;
+import cn.hutool.core.util.StrUtil;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -503,13 +503,13 @@ public enum PathMatcher {
      * @throws IllegalArgumentException if the two patterns cannot be combined
      */
     public String combine(String pattern1, String pattern2) {
-        if (StringUtils.isBlank(pattern1) && StringUtils.isBlank(pattern2)) {
+        if (StrUtil.isBlank(pattern1) && StrUtil.isBlank(pattern2)) {
             return "";
         }
-        if (StringUtils.isBlank(pattern1)) {
+        if (StrUtil.isBlank(pattern1)) {
             return pattern2;
         }
-        if (StringUtils.isBlank(pattern2)) {
+        if (StrUtil.isBlank(pattern2)) {
             return pattern1;
         }
 

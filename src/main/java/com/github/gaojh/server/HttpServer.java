@@ -30,7 +30,6 @@ public class HttpServer {
 
     private static Log log = LogFactory.get();
 
-
     public HttpServer() {
         int bossSize = Integer.parseInt(System.getProperty("server.boss.size", "2"));
         int workerSize = Integer.parseInt(System.getProperty("server.worker.size", "4"));

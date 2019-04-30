@@ -1,7 +1,6 @@
 package com.github.gaojh.mvc.utils;
 
-
-import org.apache.commons.lang3.StringUtils;
+import cn.hutool.core.util.StrUtil;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -31,10 +30,10 @@ public class MimeTypeUtils {
     }
 
     public static String getContentType(String url) {
-        if (StringUtils.contains(url, ".")) {
-            String ext = StringUtils.substringAfterLast(url, ".").toLowerCase();
+        if (StrUtil.containsAny(url, ".")) {
+            String ext = StrUtil.subAfter(url, ".",true).toLowerCase();
             String contentType = map.get(ext);
-            if (StringUtils.isNotBlank(contentType)) {
+            if (StrUtil.isNotBlank(contentType)) {
                 return contentType;
             }
         }

@@ -11,11 +11,5 @@ import java.lang.annotation.*;
 @Target({ElementType.METHOD, ElementType.TYPE})
 public @interface RequestMapping {
     String[] value() default {};
-    METHOD method() default METHOD.ALL;
-    enum METHOD {
-        /**
-         * 请求类型
-         */
-        POST, GET, ALL
-    }
+    RequestMethod[] method() default {};
 }

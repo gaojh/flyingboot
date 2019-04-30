@@ -91,7 +91,7 @@
 //    }
 //
 //    private CompletableFuture<HttpResponse> doGet(FlyingContext flyingContext, HttpRequest httpRequest, HttpResponse httpResponse) {
-//        HttpRoute httpRoute = flyingContext.fetchGetRoute(httpRequest.url());
+//        WebRoute httpRoute = flyingContext.fetchGetRoute(httpRequest.url());
 //        Method method = httpRoute.getMethod();
 //        Parameter[] params = method.getParameters();
 //        String[] parameterNames = ClassUtils.getMethodParamNames(method);
@@ -103,7 +103,7 @@
 //
 //    }
 //
-//    private void setParamsValue(HttpRequest httpRequest, HttpResponse httpResponse, HttpRoute httpRoute, Parameter[] params, String[] parameterNames, Object[] values) {
+//    private void setParamsValue(HttpRequest httpRequest, HttpResponse httpResponse, WebRoute httpRoute, Parameter[] params, String[] parameterNames, Object[] values) {
 //        for (int i = 0; i < params.length; i++) {
 //            Parameter parameter = params[i];
 //            RequestParam requestParam = parameter.getAnnotation(RequestParam.class);
@@ -112,7 +112,7 @@
 //        }
 //    }
 //
-//    private void setValue(HttpRequest httpRequest, HttpResponse httpResponse, HttpRoute httpRoute, String[] parameterNames, Object[] values, int i, Parameter parameter, RequestParam requestParam, PathParam pathParam) {
+//    private void setValue(HttpRequest httpRequest, HttpResponse httpResponse, WebRoute httpRoute, String[] parameterNames, Object[] values, int i, Parameter parameter, RequestParam requestParam, PathParam pathParam) {
 //        if (requestParam != null) {
 //            String name = StringUtils.isBlank(requestParam.value()) ? parameterNames[i] : requestParam.value();
 //            List<String> value = httpRequest.parameters().get(name);
@@ -134,7 +134,7 @@
 //    }
 //
 //    private CompletableFuture<HttpResponse> doPost(FlyingContext flyingContext, HttpRequest httpRequest, HttpResponse httpResponse) {
-//        HttpRoute httpRoute = flyingContext.fetchPostRoute(httpRequest.url());
+//        WebRoute httpRoute = flyingContext.fetchPostRoute(httpRequest.url());
 //        Method method = httpRoute.getMethod();
 //        Parameter[] params = method.getParameters();
 //        Type[] types = method.getGenericParameterTypes();
@@ -166,7 +166,7 @@
 //        return invoke(flyingContext, httpResponse, httpRoute, method, values);
 //    }
 //
-//    private CompletableFuture<HttpResponse> invoke(FlyingContext flyingContext, HttpResponse httpResponse, HttpRoute config, Method method, Object[] values) {
+//    private CompletableFuture<HttpResponse> invoke(FlyingContext flyingContext, HttpResponse httpResponse, WebRoute config, Method method, Object[] values) {
 //        return CompletableFuture.supplyAsync(() -> {
 //            try {
 //                Object result = method.invoke(config.getObject(), values);

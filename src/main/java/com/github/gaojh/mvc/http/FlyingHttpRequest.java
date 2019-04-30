@@ -1,8 +1,13 @@
 package com.github.gaojh.mvc.http;
 
 import cn.hutool.core.io.FileUtil;
+import com.github.gaojh.context.ApplicationUtil;
+import com.github.gaojh.mvc.annotation.RequestMapping;
+import com.github.gaojh.mvc.annotation.RequestMethod;
+import com.github.gaojh.mvc.context.WebContext;
 import com.github.gaojh.mvc.multipart.FileItem;
 import com.github.gaojh.mvc.multipart.MimeType;
+import com.github.gaojh.mvc.route.WebRoute;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandlerContext;
@@ -44,7 +49,7 @@ public class FlyingHttpRequest implements HttpRequest {
         QueryStringDecoder decoder = new QueryStringDecoder(httpRequest.uri());
         this.url = decoder.path();
         if (null == this.url || this.url.isEmpty() || "/".equals(this.url)) {
-            this.url = "/index.html";
+            this.url = "/";
         }
         this.parameters.putAll(decoder.parameters());
 

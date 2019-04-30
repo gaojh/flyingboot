@@ -1,5 +1,7 @@
 package com.github.gaojh.mvc.utils;
 
+import cn.hutool.core.date.format.FastDateFormat;
+import cn.hutool.core.util.StrUtil;
 import cn.hutool.log.Log;
 import cn.hutool.log.LogFactory;
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -9,8 +11,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.*;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.util.JSONPObject;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.time.FastDateFormat;
 
 import java.io.IOException;
 import java.text.ParseException;
@@ -69,7 +69,7 @@ public class JsonTools {
     public static class JsonDateDeserializer extends JsonDeserializer<Date> {
         @Override
         public Date deserialize(JsonParser jp, DeserializationContext ctxt) throws IOException {
-            if (StringUtils.isEmpty(jp.getText())) {
+            if (StrUtil.isEmpty(jp.getText())) {
                 return null;
             }
             try {
@@ -127,7 +127,7 @@ public class JsonTools {
      * @see #fromJson(String, JavaType)
      */
     public <T> T fromJson(String jsonString, Class<T> clazz) {
-        if (StringUtils.isEmpty(jsonString)) {
+        if (StrUtil.isEmpty(jsonString)) {
             return null;
         }
 
@@ -143,7 +143,7 @@ public class JsonTools {
      * 反序列化复杂Collection如List<Component>, contructCollectionType()或contructMapType()构造类型, 然后调用本函数.
      */
     public <T> T fromJson(String jsonString, TypeReference typeReference) {
-        if (StringUtils.isEmpty(jsonString)) {
+        if (StrUtil.isEmpty(jsonString)) {
             return null;
         }
 
@@ -160,7 +160,7 @@ public class JsonTools {
      * 反序列化复杂Collection如List<Component>, contructCollectionType()或contructMapType()构造类型, 然后调用本函数.
      */
     public <T> T fromJson(String jsonString, JavaType javaType) {
-        if (StringUtils.isEmpty(jsonString)) {
+        if (StrUtil.isEmpty(jsonString)) {
             return null;
         }
 
