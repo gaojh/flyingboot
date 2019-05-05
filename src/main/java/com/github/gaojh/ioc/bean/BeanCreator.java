@@ -118,6 +118,7 @@ public class BeanCreator extends BeanScanner {
                 } else {
                     object = method.invoke(beanDefine.getObject(), getParameters(method));
                 }
+                logger.debug("从Configuration加载bean：{}", method.getReturnType().getName());
                 createBeanDefine(object);
             }
         }
