@@ -6,7 +6,6 @@ import cn.hutool.core.util.StrUtil;
 import com.github.gaojh.config.Environment;
 import com.github.gaojh.ioc.annotation.Autowired;
 import com.github.gaojh.ioc.annotation.Bean;
-import com.github.gaojh.ioc.annotation.Configuration;
 import com.github.gaojh.ioc.annotation.Value;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,6 +35,7 @@ public class BeanCreator extends BeanScanner {
     public BeanCreator(Environment environment) {
         this.environment = environment;
         this.createBeanDefine(environment);
+        initConfigurations();
         initBeans();
     }
 
@@ -49,8 +49,31 @@ public class BeanCreator extends BeanScanner {
 
     protected BeanDefine createBeanDefine(Object object) {
         BeanDefine beanDefine = new BeanDefine(object);
-        beanDefineMap.put(getBeanName(beanDefine.getType()), beanDefine);
+        String name = getBeanName(beanDefine.getType());
+        beanDefineMap.put(name, beanDefine);
         return beanDefine;
+    }
+
+    protected BeanDefine createBeanDefine(String name, Object object) {
+        BeanDefine beanDefine = new BeanDefine(object);
+        beanDefineMap.put(name, beanDefine);
+        return beanDefine;
+    }
+
+    private void initConfigurations() {
+        getConfigurationClassSet().forEach(clazz -> {
+            try {
+                Object o = clazz.newInstance();
+                BeanDefine beanDefine = new BeanDefine(clazz, o);
+                //还未file设值，先放入临时的map中，设置完成之后再移入正式的
+                beanDefineMap.put(clazz.getName(), beanDefine);
+                //设置Field
+                setFields(beanDefine);
+                initConfiguration(clazz);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        });
     }
 
     private void initBeans() {
@@ -94,10 +117,6 @@ public class BeanCreator extends BeanScanner {
 
         //设置Field
         setFields(beanDefine);
-
-        if (clazz.isAnnotationPresent(Configuration.class)) {
-            initConfiguration(clazz);
-        }
         logger.debug("加载bean：{}", name);
         return beanDefine;
     }
@@ -119,7 +138,7 @@ public class BeanCreator extends BeanScanner {
                     object = method.invoke(beanDefine.getObject(), getParameters(method));
                 }
                 logger.debug("从Configuration加载bean：{}", method.getReturnType().getName());
-                createBeanDefine(object);
+                createBeanDefine(method.getReturnType().getName(), object);
             }
         }
 
@@ -229,6 +248,10 @@ public class BeanCreator extends BeanScanner {
             String key = StrUtil.subBetween(valueStr, "${", "}");
             ReflectUtil.setFieldValue(beanDefine.getObject(), field, environment.getString(key));
         }
+    }
+
+    public static void main(String[] args) {
+        System.out.println(BeanCreator.class.isAssignableFrom(BeanCreator.class));
     }
 
 }
