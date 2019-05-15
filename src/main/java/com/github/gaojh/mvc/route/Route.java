@@ -1,9 +1,8 @@
 package com.github.gaojh.mvc.route;
 
 import com.github.gaojh.mvc.annotation.RequestMethod;
-import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
-import lombok.NoArgsConstructor;
 
 import java.lang.reflect.Method;
 
@@ -12,9 +11,8 @@ import java.lang.reflect.Method;
  * @date 2018/6/7 下午10:12
  */
 @Data
-@AllArgsConstructor
-@NoArgsConstructor
-public class WebRoute {
+@Builder
+public class Route {
     /**
      * controller的instance
      */
@@ -26,12 +24,4 @@ public class WebRoute {
 
     private String[] paramNames;
     private Object[] params;
-
-    public WebRoute(Class type, Object object, Method method, String urlMapping,RequestMethod[] requestMethod) {
-        this.type = type;
-        this.object = object;
-        this.method = method;
-        this.urlMapping = urlMapping;
-        this.requestMethod = requestMethod;
-    }
 }

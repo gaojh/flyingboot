@@ -5,6 +5,8 @@ import com.github.gaojh.mvc.ApplicationRunner;
 import com.github.gaojh.mvc.annotation.RequestMethod;
 import com.github.gaojh.mvc.interceptor.HandlerInterceptor;
 import com.github.gaojh.mvc.utils.PathMatcher;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -15,38 +17,40 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class WebFactory {
 
-    private ConcurrentHashMap<String, WebRoute> routeMap = new ConcurrentHashMap<>(128);
+    private static final Logger logger = LoggerFactory.getLogger(WebFactory.class);
+    private ConcurrentHashMap<String, Route> routeMap = new ConcurrentHashMap<>(128);
     private ConcurrentHashMap<String, List<HandlerInterceptor>> interceptorMap = new ConcurrentHashMap<>(128);
     private TreeMap<Integer, ApplicationRunner> setupMap = new TreeMap<>();
 
 
-    public WebRoute getRoute(String url) {
+    public Route getRoute(String url) {
         return this.getRoute(url, null);
     }
 
-    public WebRoute getRoute(String url, RequestMethod method) {
-        WebRoute webRoute = routeMap.get(url);
-        if (webRoute == null) {
-            Optional<WebRoute> optional = routeMap.entrySet().stream().filter(entry -> PathMatcher.me.isPattern(entry.getKey()) && PathMatcher.me.match(entry.getKey(), url)).map(Map.Entry::getValue).findFirst();
+    public Route getRoute(String url, RequestMethod method) {
+        Route route = routeMap.get(url);
+        if (route == null) {
+            Optional<Route> optional = routeMap.entrySet().stream().filter(entry -> PathMatcher.me.isPattern(entry.getKey()) && PathMatcher.me.match(entry.getKey(), url)).map(Map.Entry::getValue).findFirst();
             if (optional.isPresent()) {
-                webRoute = optional.get();
+                route = optional.get();
             } else {
                 return null;
             }
         }
 
         if (method == null) {
-            return webRoute;
-        } else if (ArrayUtil.contains(webRoute.getRequestMethod(), method)) {
-            return webRoute;
+            return route;
+        } else if (ArrayUtil.contains(route.getRequestMethod(), method)) {
+            return route;
         } else {
             return null;
         }
 
     }
 
-    protected void putRoute(String url, WebRoute webRoute) {
-        this.routeMap.put(url, webRoute);
+    protected void putRoute(String url, Route route) {
+        logger.debug("注册路由器：{} ===> {}", url, route.getType().getName() + "." + route.getMethod().getName());
+        this.routeMap.put(url, route);
     }
 
     public List<HandlerInterceptor> getInterceptor(String path) {

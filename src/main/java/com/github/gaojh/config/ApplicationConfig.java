@@ -26,7 +26,7 @@ public class ApplicationConfig {
     public static Long THREAD_POOL_KEEP_ALIVE_TIME = 0L;
 
 
-    public static void init(Class<?> source, Environment environment) {
+    public static void init(Class<?> source) {
         if (source.isAnnotationPresent(ComponentScan.class)) {
             ComponentScan componentScan = source.getAnnotation(ComponentScan.class);
             if (componentScan.value().length > 0) {
@@ -35,8 +35,6 @@ public class ApplicationConfig {
         } else {
             ApplicationConfig.BASE_PACKAGE = new String[]{source.getPackage().getName()};
         }
-
-        ApplicationConfig.PORT = environment.getInteger("server.port", 2019);
     }
 
 

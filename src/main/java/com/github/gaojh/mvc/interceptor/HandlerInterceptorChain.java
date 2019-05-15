@@ -1,7 +1,7 @@
 package com.github.gaojh.mvc.interceptor;
 
-import com.github.gaojh.mvc.http.HttpRequest;
-import com.github.gaojh.mvc.http.HttpResponse;
+import com.github.gaojh.server.http.HttpRequest;
+import com.github.gaojh.server.http.HttpResponse;
 
 import java.util.ArrayList;
 import java.util.List;

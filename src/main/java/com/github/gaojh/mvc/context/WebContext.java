@@ -1,16 +1,15 @@
 package com.github.gaojh.mvc.context;
 
-import cn.hutool.core.util.ClassUtil;
 import cn.hutool.core.util.StrUtil;
-import com.github.gaojh.context.ApplicationContext;
 import com.github.gaojh.mvc.ApplicationRunner;
 import com.github.gaojh.mvc.annotation.*;
 import com.github.gaojh.mvc.interceptor.HandlerInterceptor;
-import com.github.gaojh.mvc.route.DynamicRoute;
+import com.github.gaojh.mvc.route.Route;
+import com.github.gaojh.mvc.route.RouterFunction;
 import com.github.gaojh.mvc.route.WebFactory;
-import com.github.gaojh.mvc.route.WebRoute;
 import com.github.gaojh.mvc.utils.ClassUtils;
-import io.netty.handler.codec.http.FullHttpRequest;
+import com.github.gaojh.ioc.context.*;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,24 +30,13 @@ public class WebContext extends WebFactory {
 
     public WebContext(ApplicationContext applicationContext) {
         this.applicationContext = applicationContext;
+        initWebContext();
     }
 
     public void initWebContext() {
         initRoutes();
         initInterceptor();
         initApplicationRunners();
-    }
-
-    public void addDynamicRoute(DynamicRoute dynamicRoute) {
-        WebRoute webRoute = new WebRoute();
-        webRoute.setRequestMethod(new RequestMethod[]{dynamicRoute.getRequestMethod()});
-        webRoute.setType(dynamicRoute.getHandlerClass());
-        webRoute.setUrlMapping(dynamicRoute.getPath());
-        webRoute.setObject(applicationContext.getBean(dynamicRoute.getHandlerClass()));
-        webRoute.setParams(new Object[1]);
-        webRoute.setMethod(ClassUtil.getDeclaredMethod(dynamicRoute.getHandlerClass(), "handle", FullHttpRequest.class));
-        putRoute(dynamicRoute.getPath(), webRoute);
-        logger.debug("注册动态路由：{} ===> {}", dynamicRoute.getPath(), dynamicRoute.getHandlerClass().getName());
     }
 
     private void initRoutes() {
@@ -73,16 +61,16 @@ public class WebContext extends WebFactory {
                             url = "/" + url;
                         }
                         url = StrUtil.replace(url, "//", "/");
-                        WebRoute webRoute = new WebRoute(clazz, object, method, url, methodRequestMapping.method());
-                        webRoute.setParamNames(ClassUtils.getMethodParamNames(method));
-                        webRoute.setParams(new Object[method.getParameterCount()]);
-                        putRoute(url, webRoute);
-                        logger.debug("注册路由器：{} ===> {}", url, clazz.getName() + "." + method.getName());
+                        Route route = Route.builder().type(clazz).object(object).method(method).requestMethod(methodRequestMapping.method()).paramNames(ClassUtils.getMethodParamNames(method)).params(new Object[method.getParameterCount()]).build();
+                        putRoute(url, route);
                     }
                 }
 
             }
         }
+
+        RouterFunction routerFunction = applicationContext.getBean(RouterFunction.class);
+        routerFunction.getRouteList().forEach(webRoute -> putRoute(webRoute.getUrlMapping(), webRoute));
     }
 
 

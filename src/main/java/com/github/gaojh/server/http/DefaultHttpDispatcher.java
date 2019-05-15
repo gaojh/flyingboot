@@ -1,16 +1,16 @@
-package com.github.gaojh.mvc.http;
+package com.github.gaojh.server.http;
 
 import com.github.gaojh.mvc.context.WebContext;
 import com.github.gaojh.mvc.interceptor.HandlerInterceptorChain;
-import com.github.gaojh.mvc.route.FlyingWebRouter;
-import com.github.gaojh.mvc.route.WebRoute;
-import com.github.gaojh.mvc.route.WebRouter;
+import com.github.gaojh.mvc.route.DefaultRouter;
+import com.github.gaojh.mvc.route.Route;
+import com.github.gaojh.mvc.route.Router;
 import com.github.gaojh.mvc.utils.RespUtils;
 import cn.hutool.cache.Cache;
 import cn.hutool.cache.CacheUtil;
 import cn.hutool.core.io.IoUtil;
 import cn.hutool.core.util.StrUtil;
-import com.github.gaojh.context.ApplicationUtil;
+import com.github.gaojh.ioc.context.ApplicationUtil;
 import com.github.gaojh.mvc.Mvcs;
 import com.github.gaojh.mvc.utils.MimeTypeUtils;
 import com.github.gaojh.server.context.HttpContext;
@@ -28,18 +28,18 @@ import java.util.concurrent.*;
  * @author 高建华
  * @date 2019-03-31 12:41
  */
-public class FlyingHttpDispatcher implements HttpDispatcher {
+public class DefaultHttpDispatcher implements HttpDispatcher {
 
-    private static final Logger logger = LoggerFactory.getLogger(FlyingHttpDispatcher.class);
-    private WebRouter webRouter;
+    private static final Logger logger = LoggerFactory.getLogger(DefaultHttpDispatcher.class);
+    private Router router;
     private WebContext webContext;
     /**
      * 页面缓存，默认1000条
      */
     private Cache<String, byte[]> cache = CacheUtil.newLFUCache(1000);
 
-    public FlyingHttpDispatcher() {
-        webRouter = new FlyingWebRouter();
+    public DefaultHttpDispatcher() {
+        router = new DefaultRouter();
         webContext = ApplicationUtil.getWebContext();
     }
 
@@ -57,13 +57,13 @@ public class FlyingHttpDispatcher implements HttpDispatcher {
             httpResponse.success(true).data(getStaticResource(httpRequest.request(), url));
             future = CompletableFuture.completedFuture(httpContext);
         } else {
-            WebRoute webRoute = webContext.getRoute(url);
-            if (webRoute == null) {
+            Route route = webContext.getRoute(url);
+            if (route == null) {
                 httpResponse.success(false).httpResponseStatus(HttpResponseStatus.BAD_REQUEST).msg("没有配置对应的路由：" + url);
                 future = CompletableFuture.completedFuture(httpContext);
             } else {
                 if (interceptorChain.applyPreHandle(httpRequest, httpResponse)) {
-                    future = webRouter.invoke(httpContext, webRoute);
+                    future = router.invoke(httpContext, route);
                 } else {
                     httpResponse.success(false).msg("已拦截").httpResponseStatus(HttpResponseStatus.OK);
                     future = CompletableFuture.completedFuture(httpContext);

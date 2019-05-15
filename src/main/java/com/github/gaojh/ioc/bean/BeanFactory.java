@@ -1,17 +1,12 @@
 package com.github.gaojh.ioc.bean;
 
 import cn.hutool.core.convert.Convert;
-import com.github.gaojh.config.Environment;
 
 /**
  * @author 高建华
  * @date 2019-04-28 21:13
  */
 public class BeanFactory extends BeanCreator {
-
-    public BeanFactory(Environment environment) {
-        super(environment);
-    }
 
     public Object getBean(String name) {
         BeanDefine beanDefine = getBeanDefine(name);

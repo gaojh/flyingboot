@@ -1,4 +1,4 @@
-package com.github.gaojh.mvc.http;
+package com.github.gaojh.server.http;
 
 import com.github.gaojh.server.context.HttpContext;
 

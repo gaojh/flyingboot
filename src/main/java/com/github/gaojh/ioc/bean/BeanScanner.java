@@ -24,14 +24,14 @@ public class BeanScanner implements Scanner {
 
     private ConcurrentHashMap<String, Class<?>> beanClassMap = new ConcurrentHashMap<>();
     private ConcurrentHashSet<Class<?>> beanClassSet = new ConcurrentHashSet<>();
-    private ConcurrentHashSet<Class<?>> configurationClassSet = new ConcurrentHashSet<>();
+    //private ConcurrentHashSet<Class<?>> configurationClassSet = new ConcurrentHashSet<>();
 
     public BeanScanner() {
-        List<Class<? extends Annotation>> annotationList = CollUtil.toList(Component.class, Controller.class, Setup.class, Interceptor.class);
+        List<Class<? extends Annotation>> annotationList = CollUtil.toList(Configuration.class,Component.class, Controller.class, Setup.class, Interceptor.class);
         beanClassSet.addAll(scan(annotationList));
 
-        List<Class<? extends Annotation>> configurationAnnotationList = CollUtil.toList(Configuration.class);
-        configurationClassSet.addAll(scan(configurationAnnotationList));
+        /*List<Class<? extends Annotation>> configurationAnnotationList = CollUtil.toList(Configuration.class);
+        configurationClassSet.addAll(scan(configurationAnnotationList));*/
 
         beanClassSet.forEach(clazz -> beanClassMap.put(getBeanName(clazz), clazz));
     }
@@ -48,9 +48,11 @@ public class BeanScanner implements Scanner {
         return beanClassSet;
     }
 
-    protected Set<Class<?>> getConfigurationClassSet() {
-        return configurationClassSet;
+    protected Set<Class<?>> getBeanClassWithAnnotation(Class<? extends Annotation> annotationclass) {
+        return beanClassSet.stream().filter(clazz -> clazz.isAnnotationPresent(annotationclass)).collect(Collectors.toSet());
     }
+
+
 
     public List<Class<?>> getBeanClassOfAnnotation(Class<? extends Annotation> clazz) {
         return beanClassSet.stream().filter(c -> c.isAnnotationPresent(clazz)).collect(Collectors.toList());
@@ -69,7 +71,6 @@ public class BeanScanner implements Scanner {
             if (CollectionUtil.isEmpty(typeList)) {
                 //有可能，Configuration中定义了bean
                 return clazz.getName();
-                //throw new RuntimeException(String.format("该接口[%s]未找到对应的实现类，或其实现类未加注解！", clazz.getName()));
             } else if (typeList.size() > 1) {
                 String msg = String.format("该接口[%s]的实现类有%d个，应该只能是1个", clazz.getName(), typeList.size());
                 throw new RuntimeException(msg);

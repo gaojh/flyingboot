@@ -1,7 +1,7 @@
 package com.github.gaojh.mvc.utils;
 
-import com.github.gaojh.mvc.http.HttpRequest;
-import com.github.gaojh.mvc.http.HttpResponse;
+import com.github.gaojh.server.http.HttpRequest;
+import com.github.gaojh.server.http.HttpResponse;
 import com.github.gaojh.server.context.HttpContext;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFutureListener;

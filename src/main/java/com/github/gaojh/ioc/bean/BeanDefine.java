@@ -1,26 +1,29 @@
 package com.github.gaojh.ioc.bean;
 
-import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.NoArgsConstructor;
 
 /**
  * @author 高建华
  * @date 2018/7/7 下午9:21
  */
 @Data
-@NoArgsConstructor
-@AllArgsConstructor
 public class BeanDefine {
 
+    private String name;
     private Class<?> type;
     private Object object;
+    private boolean isSingleton;
 
     public BeanDefine(Object object) {
-        this(object, object.getClass());
+        this(object.getClass(), object);
     }
 
-    public BeanDefine(Object object, Class<?> type) {
+    public BeanDefine(Class<?> type, Object object) {
+        this(type.getName(), type, object);
+    }
+
+    public BeanDefine(String name, Class<?> type, Object object) {
+        this.name = name;
         this.object = object;
         this.type = type;
     }

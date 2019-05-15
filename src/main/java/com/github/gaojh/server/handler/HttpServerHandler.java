@@ -1,7 +1,7 @@
 package com.github.gaojh.server.handler;
 
-import com.github.gaojh.mvc.http.FlyingHttpDispatcher;
-import com.github.gaojh.mvc.http.HttpDispatcher;
+import com.github.gaojh.server.http.DefaultHttpDispatcher;
+import com.github.gaojh.server.http.HttpDispatcher;
 import com.github.gaojh.server.context.HttpContext;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
@@ -17,7 +17,7 @@ public class HttpServerHandler extends ChannelInboundHandlerAdapter {
     private HttpDispatcher httpDispatcher;
 
     public HttpServerHandler() {
-        httpDispatcher = new FlyingHttpDispatcher();
+        httpDispatcher = new DefaultHttpDispatcher();
     }
 
     @Override

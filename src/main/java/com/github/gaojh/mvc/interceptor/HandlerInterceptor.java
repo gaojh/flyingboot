@@ -1,7 +1,7 @@
 package com.github.gaojh.mvc.interceptor;
 
-import com.github.gaojh.mvc.http.HttpRequest;
-import com.github.gaojh.mvc.http.HttpResponse;
+import com.github.gaojh.server.http.HttpRequest;
+import com.github.gaojh.server.http.HttpResponse;
 
 /**
  * @author 高建华

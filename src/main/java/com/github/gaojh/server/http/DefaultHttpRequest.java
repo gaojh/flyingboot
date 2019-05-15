@@ -1,13 +1,8 @@
-package com.github.gaojh.mvc.http;
+package com.github.gaojh.server.http;
 
 import cn.hutool.core.io.FileUtil;
-import com.github.gaojh.context.ApplicationUtil;
-import com.github.gaojh.mvc.annotation.RequestMapping;
-import com.github.gaojh.mvc.annotation.RequestMethod;
-import com.github.gaojh.mvc.context.WebContext;
 import com.github.gaojh.mvc.multipart.FileItem;
 import com.github.gaojh.mvc.multipart.MimeType;
-import com.github.gaojh.mvc.route.WebRoute;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandlerContext;
@@ -24,7 +19,7 @@ import java.util.*;
  * @author 高建华
  * @date 2018/6/22 下午11:22
  */
-public class FlyingHttpRequest implements HttpRequest {
+public class DefaultHttpRequest implements HttpRequest {
 
     private static final HttpDataFactory HTTP_DATA_FACTORY = new DefaultHttpDataFactory(DefaultHttpDataFactory.MINSIZE);
 
@@ -37,7 +32,7 @@ public class FlyingHttpRequest implements HttpRequest {
     private boolean keepAlive;
     private Map<String, FileItem> fileItems = new HashMap<>();
 
-    public FlyingHttpRequest(FullHttpRequest httpRequest, ChannelHandlerContext ctx) {
+    public DefaultHttpRequest(FullHttpRequest httpRequest, ChannelHandlerContext ctx) {
         this.httpRequest = httpRequest;
         this.ctx = ctx;
         this.keepAlive = HttpUtil.isKeepAlive(httpRequest);

@@ -8,6 +8,9 @@ import cn.hutool.log.LogFactory;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.*;
+import io.netty.channel.epoll.Epoll;
+import io.netty.channel.epoll.EpollEventLoopGroup;
+import io.netty.channel.epoll.EpollServerSocketChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
@@ -17,6 +20,8 @@ import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.stream.ChunkedWriteHandler;
 import io.netty.util.NetUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @author 高建华
@@ -28,17 +33,22 @@ public class HttpServer {
     private EventLoopGroup worker;
     private ServerBootstrap bootstrap;
 
-    private static Log log = LogFactory.get();
+    private static final Log log = LogFactory.get();
 
     public HttpServer() {
         int bossSize = Integer.parseInt(System.getProperty("server.boss.size", "2"));
         int workerSize = Integer.parseInt(System.getProperty("server.worker.size", "4"));
-        boss = new NioEventLoopGroup(bossSize, new NamedThreadFactory("NettyServerBoss", true));
-        worker = new NioEventLoopGroup(workerSize, new NamedThreadFactory("NettyServerWorker", true));
+        if (Epoll.isAvailable()) {
+            boss = new EpollEventLoopGroup(bossSize, new NamedThreadFactory("NettyServerBoss", true));
+            worker = new EpollEventLoopGroup(workerSize, new NamedThreadFactory("NettyServerWorker", true));
+        } else {
+            boss = new NioEventLoopGroup(bossSize, new NamedThreadFactory("NettyServerBoss", true));
+            worker = new NioEventLoopGroup(workerSize, new NamedThreadFactory("NettyServerWorker", true));
+        }
         bootstrap = new ServerBootstrap();
 
         bootstrap.group(boss, worker);
-        bootstrap.channel(NioServerSocketChannel.class);
+        bootstrap.channel(worker instanceof EpollEventLoopGroup ? EpollServerSocketChannel.class : NioServerSocketChannel.class);
         bootstrap.option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
         bootstrap.childOption(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
         bootstrap.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 60000);

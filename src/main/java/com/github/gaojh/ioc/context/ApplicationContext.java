@@ -1,7 +1,6 @@
-package com.github.gaojh.context;
+package com.github.gaojh.ioc.context;
 
 import com.github.gaojh.config.ApplicationConfig;
-import com.github.gaojh.config.Environment;
 import com.github.gaojh.ioc.bean.BeanFactory;
 import io.netty.util.concurrent.DefaultThreadFactory;
 
@@ -16,19 +15,16 @@ import java.util.concurrent.TimeUnit;
  */
 public class ApplicationContext extends BeanFactory {
 
-    private Environment environment;
-
     private ExecutorService executorService;
 
-    public ApplicationContext(Environment environment) {
-        super(environment);
-        this.environment = environment;
-        executorService = new ThreadPoolExecutor(ApplicationConfig.THREAD_POOL_CORE_SIZE,
+    public ApplicationContext() {
+        executorService = new ThreadPoolExecutor(
+                ApplicationConfig.THREAD_POOL_CORE_SIZE,
                 ApplicationConfig.THREAD_POOL_MAX_SIZE,
                 ApplicationConfig.THREAD_POOL_KEEP_ALIVE_TIME,
                 TimeUnit.SECONDS,
                 new SynchronousQueue<>(),
-                new DefaultThreadFactory("Flying-pool"));
+                new DefaultThreadFactory("flying-pool"));
     }
 
     /**
@@ -36,7 +32,7 @@ public class ApplicationContext extends BeanFactory {
      *
      * @return
      */
-    public ExecutorService getExecutorService() {
+    public ExecutorService executorService() {
         return executorService;
     }
 

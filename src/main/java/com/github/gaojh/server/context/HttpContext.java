@@ -1,10 +1,10 @@
 package com.github.gaojh.server.context;
 
-import com.github.gaojh.mvc.http.FlyingHttpRequest;
-import com.github.gaojh.mvc.http.FlyingHttpResponse;
+import com.github.gaojh.server.http.DefaultHttpRequest;
+import com.github.gaojh.server.http.DefaultHttpResponse;
 import com.github.gaojh.mvc.Mvcs;
-import com.github.gaojh.mvc.http.HttpRequest;
-import com.github.gaojh.mvc.http.HttpResponse;
+import com.github.gaojh.server.http.HttpRequest;
+import com.github.gaojh.server.http.HttpResponse;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
@@ -37,8 +37,8 @@ public class HttpContext {
     public HttpContext(ChannelHandlerContext ctx, FullHttpRequest request) {
         this.ctx = ctx;
         this.request = request;
-        this.httpRequest = new FlyingHttpRequest(request, ctx);
-        this.httpResponse = FlyingHttpResponse.buildSuccess(ctx);
+        this.httpRequest = new DefaultHttpRequest(request, ctx);
+        this.httpResponse = DefaultHttpResponse.buildSuccess(ctx);
         Mvcs.request.set(this.httpRequest);
         Mvcs.response.set(this.httpResponse);
     }

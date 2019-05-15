@@ -19,7 +19,7 @@ public class DemoController {
     @Autowired
     private DemoService demoService;
 
-    @RequestMapping
+    @RequestMapping("/h")
     public String hello(@RequestParam String name){
         return demoService.getName(name);
     }

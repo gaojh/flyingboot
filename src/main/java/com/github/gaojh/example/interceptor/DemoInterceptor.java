@@ -1,8 +1,8 @@
 package com.github.gaojh.example.interceptor;
 
 import com.github.gaojh.mvc.annotation.Interceptor;
-import com.github.gaojh.mvc.http.HttpRequest;
-import com.github.gaojh.mvc.http.HttpResponse;
+import com.github.gaojh.server.http.HttpRequest;
+import com.github.gaojh.server.http.HttpResponse;
 import com.github.gaojh.mvc.interceptor.HandlerInterceptor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
