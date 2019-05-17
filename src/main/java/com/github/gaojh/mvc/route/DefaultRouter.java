@@ -16,6 +16,7 @@ import com.github.gaojh.server.context.HttpContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.lang.reflect.Type;
@@ -99,7 +100,12 @@ public class DefaultRouter implements Router {
 
     private CompletableFuture<HttpContext> invokeMethod(HttpContext httpContext, Route route) {
         return CompletableFuture.supplyAsync(() -> {
-            Object result = ReflectUtil.invoke(route.getObject(), route.getMethod(), route.getParams());
+            Object result = null;
+            try {
+                result = route.getMethod().invoke(route.getObject(),route.getParams());
+            } catch (IllegalAccessException | InvocationTargetException e) {
+                e.printStackTrace();
+            }
             httpContext.getHttpResponse().data(result);
             return httpContext;
         }, executorService);
