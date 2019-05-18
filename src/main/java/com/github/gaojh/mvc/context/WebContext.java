@@ -16,6 +16,7 @@ import org.slf4j.LoggerFactory;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
@@ -70,7 +71,7 @@ public class WebContext extends WebFactory {
         }
 
         RouterFunction routerFunction = applicationContext.getBean(RouterFunction.class);
-        routerFunction.getRouteList().forEach(webRoute -> putRoute(webRoute.getUrlMapping(), webRoute));
+        Optional.ofNullable(routerFunction).ifPresent(rf -> rf.getRouteList().forEach(webRoute -> putRoute(webRoute.getUrlMapping(), webRoute)));
     }
 
 
