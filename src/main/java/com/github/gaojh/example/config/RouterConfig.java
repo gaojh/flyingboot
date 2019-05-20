@@ -1,6 +1,8 @@
 package com.github.gaojh.example.config;
 
 import com.github.gaojh.example.handler.DemoDynamicHandler;
+import com.github.gaojh.example.handler.DemoDynamicHandler2;
+import com.github.gaojh.ioc.annotation.Autowired;
 import com.github.gaojh.ioc.annotation.Bean;
 import com.github.gaojh.ioc.annotation.Configuration;
 import com.github.gaojh.mvc.route.RouterFunction;
@@ -13,8 +15,14 @@ import com.github.gaojh.mvc.route.Routers;
 @Configuration
 public class RouterConfig {
 
+    @Autowired
+    private DemoDynamicHandler demoDynamicHandler;
+    @Autowired
+    private DemoDynamicHandler2 demoDynamicHandler2;
+
     @Bean
-    public RouterFunction router(DemoDynamicHandler demoDynamicHandler){
-       return Routers.route().GET("/hello",demoDynamicHandler).build();
+    public RouterFunction router() {
+        return Routers.route().GET("/hello", demoDynamicHandler).GET("/hello2", demoDynamicHandler2).build();
     }
+
 }

@@ -1,9 +1,12 @@
 package com.github.gaojh.config;
 
 import cn.hutool.core.io.FileUtil;
+import cn.hutool.core.util.ClassUtil;
 import cn.hutool.setting.dialect.Props;
 
+import java.net.URL;
 import java.nio.charset.Charset;
+import java.util.Optional;
 import java.util.Properties;
 
 /**
@@ -16,8 +19,13 @@ public class Environment {
 
     public Environment() {
         //先从配置文件加载
+        URL url = ClassUtil.getResourceURL("application.properties");
+        if (url != null) {
+            props = new Props(url, Charset.forName("UTF-8"));
+        }else{
+            props = new Props();
+        }
 
-        props = new Props("application.properties", Charset.forName("UTF-8"));
         //再从系统配置项获取并覆盖
         initFromSystem();
         ApplicationConfig.PORT = getInteger("server.port", 2019);

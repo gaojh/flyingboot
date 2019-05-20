@@ -2,9 +2,8 @@ package com.github.gaojh.example.handler;
 
 import com.github.gaojh.ioc.annotation.Component;
 import com.github.gaojh.server.http.HttpRequest;
-import io.netty.handler.codec.http.HttpHeaderNames;
-import io.netty.handler.codec.http.HttpHeaderValues;
-import io.netty.handler.codec.http.HttpMethod;
+import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.http.*;
 import okhttp3.*;
 
 import java.io.IOException;
@@ -17,11 +16,10 @@ import java.util.concurrent.TimeUnit;
 @Component
 public class HttpClient {
 
-
     private static final MediaType MEDIA_TYPE = MediaType.parse("Content-Type: application/json;");
     private OkHttpClient client;
 
-    public HttpClient(){
+    public HttpClient() {
         init();
     }
 
@@ -32,33 +30,32 @@ public class HttpClient {
         client = httpBuilder.build();
     }
 
-    public Request createRequest(String url, HttpRequest flyingRequest) {
+    public HttpResponse request(String url, HttpRequest httpRequest) {
         Request.Builder builder = new Request.Builder();
         builder.url(url);
-        flyingRequest.headers().forEach(builder::addHeader);
-        builder.addHeader(HttpHeaderNames.CONNECTION.toString(), HttpHeaderValues.KEEP_ALIVE.toString());
-        if (flyingRequest.method().equals(HttpMethod.POST)) {
-            builder.post(createRequestBody(flyingRequest));
+        if (httpRequest.method().equals(HttpMethod.POST)) {
+            builder.post(RequestBody.create(MEDIA_TYPE, httpRequest.body()));
         } else {
             builder.get();
         }
-        return builder.build();
-    }
 
-    public RequestBody createRequestBody(HttpRequest flyingRequest) {
-        return RequestBody.create(MEDIA_TYPE, flyingRequest.body());
-    }
-
-    public Object request(Request request) {
+        Response response;
+        FullHttpResponse fullHttpResponse;
         try {
-            Response response = client.newCall(request).execute();
+            response = client.newCall(builder.build()).execute();
             ResponseBody responseBody = response.body();
-            if (responseBody != null) {
-                return responseBody.string().replaceAll("\\\"","");
-            }
-            return null;
+            assert responseBody != null;
+            byte[] bytes = responseBody.bytes();
+            fullHttpResponse = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK, Unpooled.wrappedBuffer(bytes));
+            fullHttpResponse.headers().set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
+            fullHttpResponse.headers().add(HttpHeaderNames.CONTENT_LENGTH, bytes.length);
+            fullHttpResponse.headers().add(HttpHeaderNames.CONTENT_TYPE, responseBody.contentType());
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            e.printStackTrace();
+            fullHttpResponse = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.BAD_REQUEST);
         }
+
+
+        return fullHttpResponse;
     }
 }

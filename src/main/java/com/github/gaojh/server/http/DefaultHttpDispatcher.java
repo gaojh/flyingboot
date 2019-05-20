@@ -56,6 +56,9 @@ public class DefaultHttpDispatcher implements HttpDispatcher {
             //认为是静态资源
             httpResponse.success(true).data(getStaticResource(httpRequest.request(), url));
             future = CompletableFuture.completedFuture(httpContext);
+        } else if (StrUtil.equals(url, "/") || StrUtil.isBlank(url)) {
+            httpResponse.success(true).data(getStaticResource(httpRequest.request(), "/index.html"));
+            future = CompletableFuture.completedFuture(httpContext);
         } else {
             Route route = webContext.getRoute(url);
             if (route == null) {
