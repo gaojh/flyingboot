@@ -25,7 +25,6 @@ public class HttpServerHandler extends ChannelInboundHandlerAdapter {
         if (!(msg instanceof FullHttpRequest)) {
             return;
         }
-
         HttpContext httpContext = new HttpContext(ctx, (FullHttpRequest) msg);
         httpDispatcher.doDispatcher(httpContext);
     }

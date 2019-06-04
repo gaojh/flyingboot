@@ -4,6 +4,8 @@ import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.core.collection.ConcurrentHashSet;
 import cn.hutool.core.util.StrUtil;
+import cn.hutool.json.JSONUtil;
+import com.github.gaojh.ioc.annotation.Bean;
 import com.github.gaojh.ioc.annotation.Component;
 import com.github.gaojh.ioc.annotation.Configuration;
 import com.github.gaojh.mvc.annotation.Controller;
@@ -11,6 +13,8 @@ import com.github.gaojh.mvc.annotation.Interceptor;
 import com.github.gaojh.mvc.annotation.Setup;
 
 import java.lang.annotation.Annotation;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -20,42 +24,42 @@ import java.util.stream.Collectors;
  * @author 高建华
  * @date 2019-04-28 21:25
  */
-public class BeanScanner implements Scanner {
+public class BeanClassScanner implements Scanner {
 
-    private ConcurrentHashMap<String, Class<?>> beanClassMap = new ConcurrentHashMap<>();
-    private ConcurrentHashSet<Class<?>> beanClassSet = new ConcurrentHashSet<>();
-    //private ConcurrentHashSet<Class<?>> configurationClassSet = new ConcurrentHashSet<>();
+    private ConcurrentHashMap<String, BeanClassDefine> beanDefineClassMap = new ConcurrentHashMap<>();
 
-    public BeanScanner() {
-        List<Class<? extends Annotation>> annotationList = CollUtil.toList(Configuration.class,Component.class, Controller.class, Setup.class, Interceptor.class);
-        beanClassSet.addAll(scan(annotationList));
+    public BeanClassScanner() {
+        List<Class<? extends Annotation>> annotationList = CollUtil.toList(Configuration.class, Component.class, Controller.class, Setup.class, Interceptor.class);
 
-        /*List<Class<? extends Annotation>> configurationAnnotationList = CollUtil.toList(Configuration.class);
-        configurationClassSet.addAll(scan(configurationAnnotationList));*/
+        scan(annotationList).forEach(clazz -> {
+            String beanName = getBeanName(clazz);
+            beanDefineClassMap.put(beanName, BeanClassDefine.builder().beanClass(clazz).beanName(beanName).isConfigurationBean(false).build());
+            if (clazz.isAnnotationPresent(Configuration.class)) {
+                Arrays.stream(clazz.getMethods()).filter(method -> method.isAnnotationPresent(Bean.class)).forEach(method -> {
+                    String methodBeanName = getBeanName(method.getReturnType());
+                    BeanClassDefine beanClassDefine = BeanClassDefine.builder().beanName(methodBeanName).beanClass(method.getReturnType()).isConfigurationBean(true).configurationClass(clazz).method(method).build();
+                    beanDefineClassMap.put(methodBeanName, beanClassDefine);
+                });
+            }
+        });
 
-        beanClassSet.forEach(clazz -> beanClassMap.put(getBeanName(clazz), clazz));
     }
 
-    protected Class<?> getBeanClass(String name) {
-        return beanClassMap.get(name);
+    protected BeanClassDefine getBeanClassDefine(String name) {
+        return beanDefineClassMap.get(name);
     }
 
-    private List<Class<?>> getBeanClassOfType(Class<?> clazz) {
-        return beanClassSet.stream().filter(c -> c.isAssignableFrom(clazz)).collect(Collectors.toList());
+    private List<BeanClassDefine> getBeanClassOfType(Class<?> clazz) {
+        return beanDefineClassMap.values().stream().filter(beanClassDefine -> beanClassDefine.getBeanClass().isAssignableFrom(clazz)).collect(Collectors.toList());
     }
 
-    protected Set<Class<?>> getBeanClassSet() {
-        return beanClassSet;
+    protected Collection<BeanClassDefine> getBeanClassSet() {
+        return beanDefineClassMap.values();
     }
-
-    protected Set<Class<?>> getBeanClassWithAnnotation(Class<? extends Annotation> annotationclass) {
-        return beanClassSet.stream().filter(clazz -> clazz.isAnnotationPresent(annotationclass)).collect(Collectors.toSet());
-    }
-
 
 
     public List<Class<?>> getBeanClassOfAnnotation(Class<? extends Annotation> clazz) {
-        return beanClassSet.stream().filter(c -> c.isAnnotationPresent(clazz)).collect(Collectors.toList());
+        return beanDefineClassMap.values().stream().filter(beanClassDefine -> beanClassDefine.getBeanClass().isAnnotationPresent(clazz)).map(BeanClassDefine::getBeanClass).collect(Collectors.toList());
     }
 
     /**
@@ -67,15 +71,14 @@ public class BeanScanner implements Scanner {
     protected String getBeanName(Class<?> clazz) {
 
         if (clazz.isInterface()) {
-            List<Class<?>> typeList = getBeanClassOfType(clazz);
+            List<BeanClassDefine> typeList = getBeanClassOfType(clazz);
             if (CollectionUtil.isEmpty(typeList)) {
-                //有可能，Configuration中定义了bean
                 return clazz.getName();
             } else if (typeList.size() > 1) {
                 String msg = String.format("该接口[%s]的实现类有%d个，应该只能是1个", clazz.getName(), typeList.size());
                 throw new RuntimeException(msg);
             } else {
-                clazz = typeList.get(0);
+                clazz = typeList.get(0).getBeanClass();
             }
         }
 

@@ -1,12 +1,9 @@
 package com.github.gaojh.ioc.bean;
 
-import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.ReflectUtil;
 import cn.hutool.core.util.StrUtil;
 import com.github.gaojh.config.Environment;
 import com.github.gaojh.ioc.annotation.Autowired;
-import com.github.gaojh.ioc.annotation.Bean;
-import com.github.gaojh.ioc.annotation.Configuration;
 import com.github.gaojh.ioc.annotation.Value;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,15 +22,15 @@ import java.util.stream.Collectors;
  * @author 高建华
  * @date 2019-04-28 16:37
  */
-public class BeanCreator extends BeanScanner {
+public class BeanDefineCreator extends BeanClassScanner {
 
-    private static final Logger logger = LoggerFactory.getLogger(BeanCreator.class);
+    private static final Logger logger = LoggerFactory.getLogger(BeanDefineCreator.class);
 
     private final ConcurrentHashMap<String, BeanDefine> beanDefineMap = new ConcurrentHashMap<>();
 
     private Environment environment;
 
-    public BeanCreator() {
+    public BeanDefineCreator() {
         this.environment = new Environment();
         this.createBeanDefine(environment);
         initBeans();
@@ -47,31 +44,23 @@ public class BeanCreator extends BeanScanner {
         return beanDefineMap.get(getBeanName(clazz));
     }
 
-    protected void createBeanDefine(Object object) {
+    protected BeanDefine createBeanDefine(Object object) {
         BeanDefine beanDefine = new BeanDefine(object);
         String name = getBeanName(beanDefine.getType());
         beanDefineMap.put(name, beanDefine);
+        return beanDefine;
     }
 
-    protected void createBeanDefine(String name, Object object) {
+    protected BeanDefine createBeanDefine(String name, Object object) {
         BeanDefine beanDefine = new BeanDefine(object);
         beanDefineMap.put(name, beanDefine);
+        return beanDefine;
     }
 
     private void initBeans() {
-        //优先加载Configuration
-        getBeanClassWithAnnotation(Configuration.class).forEach(clazz -> {
+        getBeanClassSet().forEach(beanClassDefine -> {
             try {
-                createBeanDefine(clazz);
-                initConfiguration(clazz);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        });
-
-        getBeanClassSet().forEach(clazz -> {
-            try {
-                createBeanDefine(clazz);
+                createBeanDefine(beanClassDefine.getBeanClass());
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -89,52 +78,47 @@ public class BeanCreator extends BeanScanner {
         if (beanDefineMap.containsKey(name)) {
             return beanDefineMap.get(name);
         }
-        Class<?> finalClass = getBeanClass(name);
-        Constructor[] constructors = finalClass.getDeclaredConstructors();
+        BeanClassDefine beanClassDefine = getBeanClassDefine(name);
+        if (beanClassDefine == null) {
+            throw new RuntimeException("未找到到该类，可能未加入IOC管理：" + name);
+        }
+
         Object object;
-        if (constructors.length == 0) {
-            object = finalClass.newInstance();
-        } else {
-            Constructor constructor = getAutowriedContructor(finalClass);
-            if (constructor.getParameterCount() == 0) {
+        if(beanClassDefine.isConfigurationBean()){
+            BeanDefine configurationBeanDefine = createBeanDefine(beanClassDefine.getConfigurationClass());
+            Method method = beanClassDefine.getMethod();
+            if (method.getParameterCount() == 0) {
+                object = method.invoke(configurationBeanDefine.getObject());
+            } else {
+                object = method.invoke(configurationBeanDefine.getObject(), getParameters(method));
+            }
+            logger.debug("加载Configuration Bean：{}", name);
+            return createBeanDefine(beanClassDefine.getBeanName(), object);
+        }else{
+            Class<?> finalClass = beanClassDefine.getBeanClass();
+            Constructor[] constructors = finalClass.getConstructors();
+
+            if (constructors.length == 0) {
                 object = finalClass.newInstance();
             } else {
-                object = constructor.newInstance(getParameters(constructor));
-            }
-        }
-
-        BeanDefine beanDefine = new BeanDefine(finalClass, object);
-        //还未file设值，先放入临时的map中，设置完成之后再移入正式的
-        beanDefineMap.put(name, beanDefine);
-
-        //设置Field
-        setFields(beanDefine);
-        logger.debug("加载bean：{}", name);
-        return beanDefine;
-    }
-
-    /**
-     * 初始化Configuration
-     *
-     * @param clazz
-     */
-    private void initConfiguration(Class<?> clazz) throws Exception {
-        BeanDefine beanDefine = getBeanDefine(clazz);
-        List<Method> beanMethods = Arrays.stream(clazz.getDeclaredMethods()).filter(method -> method.isAnnotationPresent(Bean.class)).collect(Collectors.toList());
-        if (CollUtil.isNotEmpty(beanMethods)) {
-            for (Method method : beanMethods) {
-                Object object;
-                if (method.getParameterCount() == 0) {
-                    object = method.invoke(beanDefine.getObject());
+                Constructor constructor = getAutowriedContructor(finalClass);
+                if (constructor.getParameterCount() == 0) {
+                    object = finalClass.newInstance();
                 } else {
-                    object = method.invoke(beanDefine.getObject(), getParameters(method));
+                    object = constructor.newInstance(getParameters(constructor));
                 }
-                logger.debug("从Configuration加载bean：{}", method.getReturnType().getName());
-                createBeanDefine(method.getReturnType().getName(), object);
             }
-        }
 
+            BeanDefine beanDefine = new BeanDefine(finalClass, object);
+            //还未file设值，先放入临时的map中，设置完成之后再移入正式的
+            beanDefineMap.put(name, beanDefine);
+            //设置Field
+            setFields(beanDefine);
+            logger.debug("加载Bean：{}", name);
+            return beanDefine;
+        }
     }
+
 
     /**
      * 获取构造函数，思路如下
@@ -221,7 +205,7 @@ public class BeanCreator extends BeanScanner {
     }
 
     public static void main(String[] args) {
-        System.out.println(BeanCreator.class.isAssignableFrom(BeanCreator.class));
+        System.out.println(BeanDefineCreator.class.isAssignableFrom(BeanDefineCreator.class));
     }
 
 }

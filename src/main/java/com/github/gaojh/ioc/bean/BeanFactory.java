@@ -6,7 +6,7 @@ import cn.hutool.core.convert.Convert;
  * @author 高建华
  * @date 2019-04-28 21:13
  */
-public class BeanFactory extends BeanCreator {
+public class BeanFactory extends BeanDefineCreator {
 
     public Object getBean(String name) {
         BeanDefine beanDefine = getBeanDefine(name);
