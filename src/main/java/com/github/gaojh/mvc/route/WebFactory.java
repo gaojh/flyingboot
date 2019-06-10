@@ -49,8 +49,13 @@ public class WebFactory {
     }
 
     protected void putRoute(String url, Route route) {
-        logger.debug("注册路由器：{} ===> {}", url, route.getType().getName() + "." + route.getMethod().getName());
+        logger.debug("注册路由：{} ===> {}", url, route.getType().getName() + "." + route.getMethod().getName());
         this.routeMap.put(url, route);
+    }
+
+    protected void remoteRoute(String url) {
+        logger.debug("删除路由：{}", url);
+        this.routeMap.remove(url);
     }
 
     public List<HandlerInterceptor> getInterceptor(String path) {

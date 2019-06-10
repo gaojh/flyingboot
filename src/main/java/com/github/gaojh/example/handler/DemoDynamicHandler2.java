@@ -17,6 +17,6 @@ public class DemoDynamicHandler2 implements RouterHandler {
 
     @Override
     public Object handle(HttpRequest httpRequest) {
-        return httpClient.request("https://www.baidu.com", httpRequest);
+        return httpClient.request("http://www.baidu.com", httpRequest);
     }
 }

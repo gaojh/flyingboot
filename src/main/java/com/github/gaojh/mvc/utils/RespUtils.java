@@ -5,6 +5,7 @@ import com.github.gaojh.server.http.HttpResponse;
 import com.github.gaojh.server.context.HttpContext;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.*;
 
 /**
@@ -30,7 +31,6 @@ public class RespUtils {
         }
 
     }
-
 
     public static void sendResponse(HttpRequest httpRequest, HttpResponse flyingResponse) {
         io.netty.handler.codec.http.HttpResponse httpResponse;

@@ -96,7 +96,6 @@ public class DefaultRouter implements Router {
         }
     }
 
-
     private CompletableFuture<HttpContext> invokeMethod(HttpContext httpContext, Route route) {
         return CompletableFuture.supplyAsync(() -> {
             Object result = null;
