@@ -1,18 +1,18 @@
 package com.github.gaojh.server.http;
 
-import com.github.gaojh.mvc.context.WebContext;
-import com.github.gaojh.mvc.interceptor.HandlerInterceptorChain;
-import com.github.gaojh.mvc.route.DefaultRouter;
-import com.github.gaojh.mvc.route.Route;
-import com.github.gaojh.mvc.route.Router;
-import com.github.gaojh.mvc.utils.RespUtils;
 import cn.hutool.cache.Cache;
 import cn.hutool.cache.CacheUtil;
 import cn.hutool.core.io.IoUtil;
 import cn.hutool.core.util.StrUtil;
 import com.github.gaojh.ioc.context.ApplicationUtil;
 import com.github.gaojh.mvc.Mvcs;
+import com.github.gaojh.mvc.context.WebContext;
+import com.github.gaojh.mvc.interceptor.HandlerInterceptorChain;
+import com.github.gaojh.mvc.route.DefaultRouter;
+import com.github.gaojh.mvc.route.Route;
+import com.github.gaojh.mvc.route.Router;
 import com.github.gaojh.mvc.utils.MimeTypeUtils;
+import com.github.gaojh.mvc.utils.RespUtils;
 import com.github.gaojh.server.context.HttpContext;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.*;
@@ -22,7 +22,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.InputStream;
 import java.nio.charset.Charset;
-import java.util.concurrent.*;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * @author 高建华
@@ -30,7 +30,6 @@ import java.util.concurrent.*;
  */
 public class DefaultHttpDispatcher implements HttpDispatcher {
 
-    private static final Logger logger = LoggerFactory.getLogger(DefaultHttpDispatcher.class);
     private Router router;
     private WebContext webContext;
     /**
@@ -51,6 +50,8 @@ public class DefaultHttpDispatcher implements HttpDispatcher {
         String url = httpRequest.url();
         CompletableFuture<HttpContext> future;
         HandlerInterceptorChain interceptorChain = new HandlerInterceptorChain(webContext.getInterceptor(url));
+
+        //如果是反向代理模式，直接调用对应的route
 
         if (StrUtil.contains(url, '.')) {
             //认为是静态资源
@@ -96,23 +97,35 @@ public class DefaultHttpDispatcher implements HttpDispatcher {
             if (is == null) {
                 is = this.getClass().getResourceAsStream("/static" + requestURI);
             }
+
+            if (is == null) {
+                return notFoundResponse();
+            }
+
             bytes = IoUtil.readBytes(is);
             cache.put(requestURI, bytes);
         }
 
 
         if (bytes != null && bytes.length > 0) {
-            FullHttpResponse resp = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK, Unpooled.wrappedBuffer(bytes));
-            resp.headers().set(HttpHeaderNames.CONTENT_TYPE, MimeTypeUtils.getContentType(requestURI));
-            resp.headers().set(HttpHeaderNames.CONTENT_LENGTH, bytes.length);
-            resp.headers().add(HttpHeaderNames.CONTENT_LOCATION, request.headers().get("Host") + requestURI);
-            return resp;
+            return foundResponse(bytes, request.headers().get("Host"), requestURI);
         } else {
-            FullHttpResponse resp = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.NOT_FOUND, Unpooled.wrappedBuffer("未找到你要的资源".getBytes(Charset.forName("UTF-8"))));
-            resp.headers().set(HttpHeaderNames.CONTENT_LENGTH, 0);
-            return resp;
+            return notFoundResponse();
         }
+    }
 
+    private FullHttpResponse foundResponse(byte[] bytes, String host, String requestURI) {
+        FullHttpResponse resp = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK, Unpooled.wrappedBuffer(bytes));
+        resp.headers().set(HttpHeaderNames.CONTENT_TYPE, MimeTypeUtils.getContentType(requestURI));
+        resp.headers().set(HttpHeaderNames.CONTENT_LENGTH, bytes.length);
+        resp.headers().add(HttpHeaderNames.CONTENT_LOCATION, host + requestURI);
+        return resp;
+    }
+
+    private FullHttpResponse notFoundResponse() {
+        FullHttpResponse resp = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.NOT_FOUND, Unpooled.wrappedBuffer("未找到你要的资源".getBytes(Charset.forName("UTF-8"))));
+        resp.headers().set(HttpHeaderNames.CONTENT_LENGTH, 0);
+        return resp;
     }
 
 }

@@ -6,12 +6,15 @@ import cn.hutool.core.util.StrUtil;
 import com.fasterxml.jackson.databind.JavaType;
 import com.github.gaojh.ioc.context.ApplicationContext;
 import com.github.gaojh.ioc.context.ApplicationUtil;
-import com.github.gaojh.mvc.annotation.*;
-import com.github.gaojh.server.http.HttpRequest;
-import com.github.gaojh.server.http.HttpResponse;
+import com.github.gaojh.mvc.annotation.PathParam;
+import com.github.gaojh.mvc.annotation.RequestBody;
+import com.github.gaojh.mvc.annotation.RequestMethod;
+import com.github.gaojh.mvc.annotation.RequestParam;
 import com.github.gaojh.mvc.utils.JsonTools;
 import com.github.gaojh.mvc.utils.PathMatcher;
 import com.github.gaojh.server.context.HttpContext;
+import com.github.gaojh.server.http.HttpRequest;
+import com.github.gaojh.server.http.HttpResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -99,11 +102,16 @@ public class DefaultRouter implements Router {
     private CompletableFuture<HttpContext> invokeMethod(HttpContext httpContext, Route route) {
         return CompletableFuture.supplyAsync(() -> {
             Object result = null;
+            Method method = route.getMethod();
+            if (!method.isAccessible()) {
+                method.setAccessible(true);
+            }
             try {
-                result = route.getMethod().invoke(route.getObject(),route.getParams());
+                result = method.invoke(route.getObject(), route.getParams());
             } catch (IllegalAccessException | InvocationTargetException e) {
                 e.printStackTrace();
             }
+
             httpContext.getHttpResponse().data(result);
             return httpContext;
         }, executorService);

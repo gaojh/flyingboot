@@ -53,8 +53,14 @@ public class RespUtils {
             byte[] respBytes = obj == null ? "".getBytes() : JsonTools.DEFAULT.toJson(obj).getBytes();
             FullHttpResponse fullHttpResponse = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, httpResponseStatus, Unpooled.wrappedBuffer(respBytes));
             fullHttpResponse.headers().set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
-            fullHttpResponse.headers().add(HttpHeaderNames.CONTENT_LENGTH, respBytes.length);
-            fullHttpResponse.headers().add(HttpHeaderNames.CONTENT_TYPE, "application/json; charset=UTF-8");
+            fullHttpResponse.headers().set(HttpHeaderNames.CONTENT_LENGTH, respBytes.length);
+            fullHttpResponse.headers().set(HttpHeaderNames.CONTENT_TYPE, "application/json; charset=UTF-8");
+
+            fullHttpResponse.headers().set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN, "*");
+            fullHttpResponse.headers().set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_HEADERS, "*");
+            fullHttpResponse.headers().set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_METHODS, "*");
+
+
             return fullHttpResponse;
         }
         return (io.netty.handler.codec.http.HttpResponse) obj;

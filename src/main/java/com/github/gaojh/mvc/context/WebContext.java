@@ -31,14 +31,18 @@ public class WebContext extends WebFactory {
 
     public WebContext(ApplicationContext applicationContext) {
         this.applicationContext = applicationContext;
-        initWebContext();
+        ApplicationUtil.setWebContext(this);
     }
 
-    public void removeRoute(String url){
+    public void removeRoute(String url) {
         super.remoteRoute(url);
     }
 
-    private void initWebContext() {
+    public void addRoute(String url, Route route) {
+        super.putRoute(url, route);
+    }
+
+    public void initWebContext() {
         initRoutes();
         initInterceptor();
         initApplicationRunners();

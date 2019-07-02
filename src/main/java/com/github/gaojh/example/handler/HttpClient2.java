@@ -1,6 +1,5 @@
 package com.github.gaojh.example.handler;
 
-import cn.hutool.log.Log;
 import okhttp3.Call;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -14,19 +13,16 @@ import java.io.IOException;
  */
 public class HttpClient2 {
     public static void main(String[] args) {
-        String url = "http://wwww.baidu.com";
+        String url = "http://localhost:12345/api/flaginfo";
         OkHttpClient okHttpClient = new OkHttpClient();
-        final Request request = new Request.Builder()
-                .url(url)
-                .build();
+        final Request request = new Request.Builder().url(url).build();
         final Call call = okHttpClient.newCall(request);
-        new Thread(() -> {
-            try {
-                Response response = call.execute();
-                System.out.println(response.body().string());
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }).start();
+        try {
+            Response response = call.execute();
+            assert response.body() != null;
+            System.out.println(response.body().string());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }

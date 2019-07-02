@@ -6,7 +6,7 @@ import com.github.gaojh.server.context.HttpContext;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.*;
 
 /**
  * @author 高建华
@@ -25,7 +25,18 @@ public class HttpServerHandler extends ChannelInboundHandlerAdapter {
         if (!(msg instanceof FullHttpRequest)) {
             return;
         }
-        HttpContext httpContext = new HttpContext(ctx, (FullHttpRequest) msg);
+        FullHttpRequest fullHttpRequest = (FullHttpRequest) msg;
+        if (fullHttpRequest.method().equals(HttpMethod.OPTIONS)) {
+            FullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+            response.headers().set(HttpHeaderNames.CONTENT_LENGTH, 0);
+            response.headers().set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN, "*");
+            response.headers().set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_HEADERS, "*");
+            response.headers().set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_METHODS, "*");
+
+            ctx.writeAndFlush(response);
+            return;
+        }
+        HttpContext httpContext = new HttpContext(ctx, fullHttpRequest);
         httpDispatcher.doDispatcher(httpContext);
     }
 

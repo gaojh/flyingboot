@@ -25,6 +25,7 @@ public class ApplicationContext extends BeanFactory {
                 TimeUnit.SECONDS,
                 new SynchronousQueue<>(),
                 new DefaultThreadFactory("flying-pool"));
+        ApplicationUtil.setApplicationContext(this);
     }
 
     /**

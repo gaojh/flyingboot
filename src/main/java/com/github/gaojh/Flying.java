@@ -20,10 +20,9 @@ public class Flying {
 
         ApplicationConfig.init(source);
         ApplicationContext applicationContext = new ApplicationContext();
-        ApplicationUtil.setApplicationContext(applicationContext);
 
         WebContext webContext = new WebContext(applicationContext);
-        ApplicationUtil.setWebContext(webContext);
+        webContext.initWebContext();
 
         HttpServer httpServer = new HttpServer();
         try {
