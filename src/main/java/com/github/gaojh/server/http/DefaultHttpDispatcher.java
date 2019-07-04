@@ -5,7 +5,6 @@ import cn.hutool.cache.CacheUtil;
 import cn.hutool.core.io.IoUtil;
 import cn.hutool.core.util.StrUtil;
 import com.github.gaojh.ioc.context.ApplicationUtil;
-import com.github.gaojh.mvc.Mvcs;
 import com.github.gaojh.mvc.context.WebContext;
 import com.github.gaojh.mvc.interceptor.HandlerInterceptorChain;
 import com.github.gaojh.mvc.route.DefaultRouter;
@@ -17,8 +16,6 @@ import com.github.gaojh.server.context.HttpContext;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.*;
 import io.netty.util.ReferenceCountUtil;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.InputStream;
 import java.nio.charset.Charset;
@@ -83,8 +80,6 @@ public class DefaultHttpDispatcher implements HttpDispatcher {
             }
             return context;
         }).thenAccept(RespUtils::sendResponse).thenRun(() -> {
-            Mvcs.request.remove();
-            Mvcs.response.remove();
             ReferenceCountUtil.release(httpRequest.request());
         });
 

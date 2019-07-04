@@ -11,4 +11,6 @@ import java.lang.annotation.*;
 @Target({ElementType.TYPE, ElementType.METHOD})
 public @interface Interceptor {
     String[] pathPatterns();
+
+    String[] ignorePathPatterns() default {};
 }

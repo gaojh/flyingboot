@@ -2,6 +2,7 @@ package com.github.gaojh.mvc.route;
 
 import cn.hutool.core.util.ArrayUtil;
 import com.github.gaojh.mvc.ApplicationRunner;
+import com.github.gaojh.mvc.annotation.Interceptor;
 import com.github.gaojh.mvc.annotation.RequestMethod;
 import com.github.gaojh.mvc.interceptor.HandlerInterceptor;
 import com.github.gaojh.mvc.utils.PathMatcher;
@@ -10,6 +11,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 /**
  * @author 高建华
@@ -61,8 +63,14 @@ public class WebFactory {
     public List<HandlerInterceptor> getInterceptor(String path) {
         List<HandlerInterceptor> list = interceptorMap.get(path);
         if (list == null) {
-            Optional<List<HandlerInterceptor>> optional = interceptorMap.entrySet().stream().filter(entry -> PathMatcher.me.isPattern(entry.getKey()) && PathMatcher.me.match(entry.getKey(), path)).map(Map.Entry::getValue).findFirst();
-            list = optional.orElse(Collections.emptyList());
+            list = new ArrayList<>();
+            List<List<HandlerInterceptor>> list2 = interceptorMap.entrySet().stream().filter(entry -> PathMatcher.me.match(entry.getKey(), path)).map(Map.Entry::getValue).collect(Collectors.toList());
+            for (List<HandlerInterceptor> l : list2) {
+                list.addAll(l.stream().filter(handlerInterceptor -> {
+                    Interceptor interceptor = handlerInterceptor.getClass().getAnnotation(Interceptor.class);
+                    return Arrays.stream(interceptor.ignorePathPatterns()).noneMatch(s -> PathMatcher.me.match(s, path));
+                }).collect(Collectors.toList()));
+            }
         }
         return list;
     }

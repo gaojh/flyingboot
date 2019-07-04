@@ -7,6 +7,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.http.*;
+import io.netty.util.ReferenceCountUtil;
 
 /**
  * @author 高建华
@@ -34,6 +35,7 @@ public class HttpServerHandler extends ChannelInboundHandlerAdapter {
             response.headers().set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_METHODS, "*");
 
             ctx.writeAndFlush(response);
+            ReferenceCountUtil.release(msg);
             return;
         }
         HttpContext httpContext = new HttpContext(ctx, fullHttpRequest);

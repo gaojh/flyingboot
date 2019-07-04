@@ -19,7 +19,7 @@ public class DemoController {
     @Autowired
     private DemoService demoService;
 
-    @RequestMapping("/h")
+    @RequestMapping("/hello")
     public String hello(@RequestParam String name){
         return demoService.getName(name);
     }
@@ -27,5 +27,10 @@ public class DemoController {
     @RequestMapping("/demo")
     public Object demo(@RequestBody DemoBean demoBean){
         return demoBean;
+    }
+
+    @RequestMapping("/h2/*")
+    public String h2(){
+        return "h2";
     }
 }

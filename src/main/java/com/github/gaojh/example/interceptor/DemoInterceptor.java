@@ -11,13 +11,14 @@ import org.slf4j.LoggerFactory;
  * @author 高建华
  * @date 2019-04-16 20:52
  */
-@Interceptor(pathPatterns = {"/demo"})
+@Interceptor(pathPatterns = {"/**"},ignorePathPatterns = {"/hello"})
 public class DemoInterceptor implements HandlerInterceptor {
     private static Logger logger = LoggerFactory.getLogger(DemoInterceptor.class);
 
     @Override
     public boolean preHandle(HttpRequest httpRequest, HttpResponse httpResponse) throws Exception {
         logger.info("demo prehandle");
+        logger.info(httpRequest.url());
         return true;
     }
 
