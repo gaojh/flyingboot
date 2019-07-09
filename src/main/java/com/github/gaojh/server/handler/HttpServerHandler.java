@@ -1,8 +1,8 @@
 package com.github.gaojh.server.handler;
 
+import com.github.gaojh.server.context.HttpContext;
 import com.github.gaojh.server.http.DefaultHttpDispatcher;
 import com.github.gaojh.server.http.HttpDispatcher;
-import com.github.gaojh.server.context.HttpContext;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -27,6 +27,7 @@ public class HttpServerHandler extends ChannelInboundHandlerAdapter {
             return;
         }
         FullHttpRequest fullHttpRequest = (FullHttpRequest) msg;
+
         if (fullHttpRequest.method().equals(HttpMethod.OPTIONS)) {
             FullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
             response.headers().set(HttpHeaderNames.CONTENT_LENGTH, 0);

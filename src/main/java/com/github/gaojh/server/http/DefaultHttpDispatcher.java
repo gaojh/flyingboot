@@ -49,27 +49,26 @@ public class DefaultHttpDispatcher implements HttpDispatcher {
         HandlerInterceptorChain interceptorChain = new HandlerInterceptorChain(webContext.getInterceptor(url));
 
         //如果是反向代理模式，直接调用对应的route
-
-        if (StrUtil.contains(url, '.')) {
-            //认为是静态资源
-            httpResponse.success(true).data(getStaticResource(httpRequest.request(), url));
-            future = CompletableFuture.completedFuture(httpContext);
-        } else if (StrUtil.equals(url, "/") || StrUtil.isBlank(url)) {
-            httpResponse.success(true).data(getStaticResource(httpRequest.request(), "/index.html"));
-            future = CompletableFuture.completedFuture(httpContext);
-        } else {
-            Route route = webContext.getRoute(url);
-            if (route == null) {
-                httpResponse.success(false).httpResponseStatus(HttpResponseStatus.BAD_REQUEST).msg("没有配置对应的路由：" + url);
+        if (interceptorChain.applyPreHandle(httpRequest, httpResponse)) {
+            if (StrUtil.contains(url, '.')) {
+                //认为是静态资源
+                httpResponse.success(true).data(getStaticResource(httpRequest.request(), url));
+                future = CompletableFuture.completedFuture(httpContext);
+            } else if (StrUtil.equals(url, "/") || StrUtil.isBlank(url)) {
+                httpResponse.success(true).data(getStaticResource(httpRequest.request(), "/index.html"));
                 future = CompletableFuture.completedFuture(httpContext);
             } else {
-                if (interceptorChain.applyPreHandle(httpRequest, httpResponse)) {
-                    future = router.invoke(httpContext, route);
-                } else {
-                    httpResponse.success(false).msg("已拦截").httpResponseStatus(HttpResponseStatus.OK);
+                Route route = webContext.getRoute(url);
+                if (route == null) {
+                    httpResponse.success(false).httpResponseStatus(HttpResponseStatus.BAD_REQUEST).msg("没有配置对应的路由：" + url);
                     future = CompletableFuture.completedFuture(httpContext);
+                } else {
+                    future = router.invoke(httpContext, route);
                 }
             }
+        } else {
+            httpResponse.success(false).msg("已拦截").httpResponseStatus(HttpResponseStatus.FORBIDDEN);
+            future = CompletableFuture.completedFuture(httpContext);
         }
 
         future.thenApply(context -> {

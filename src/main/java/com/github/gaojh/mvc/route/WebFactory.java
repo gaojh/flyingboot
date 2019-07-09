@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.ToIntFunction;
 import java.util.stream.Collectors;
 
 /**
@@ -61,18 +62,19 @@ public class WebFactory {
     }
 
     public List<HandlerInterceptor> getInterceptor(String path) {
-        List<HandlerInterceptor> list = interceptorMap.get(path);
-        if (list == null) {
-            list = new ArrayList<>();
-            List<List<HandlerInterceptor>> list2 = interceptorMap.entrySet().stream().filter(entry -> PathMatcher.me.match(entry.getKey(), path)).map(Map.Entry::getValue).collect(Collectors.toList());
-            for (List<HandlerInterceptor> l : list2) {
-                list.addAll(l.stream().filter(handlerInterceptor -> {
-                    Interceptor interceptor = handlerInterceptor.getClass().getAnnotation(Interceptor.class);
-                    return Arrays.stream(interceptor.ignorePathPatterns()).noneMatch(s -> PathMatcher.me.match(s, path));
-                }).collect(Collectors.toList()));
-            }
+        List<HandlerInterceptor> list = new ArrayList<>();
+        List<List<HandlerInterceptor>> list2 = interceptorMap.entrySet().stream().filter(entry -> PathMatcher.me.match(entry.getKey(), path)).map(Map.Entry::getValue).collect(Collectors.toList());
+        for (List<HandlerInterceptor> l : list2) {
+            list.addAll(l.stream().filter(handlerInterceptor -> {
+                Interceptor interceptor = handlerInterceptor.getClass().getAnnotation(Interceptor.class);
+                return Arrays.stream(interceptor.ignorePathPatterns()).noneMatch(s -> PathMatcher.me.match(s, path));
+            }).collect(Collectors.toList()));
         }
-        return list;
+
+        return list.stream().sorted(Comparator.comparingInt(value -> {
+            Interceptor interceptor = value.getClass().getAnnotation(Interceptor.class);
+            return interceptor.order();
+        })).collect(Collectors.toList());
     }
 
     protected void putInterceptor(String path, HandlerInterceptor handlerInterceptor) {

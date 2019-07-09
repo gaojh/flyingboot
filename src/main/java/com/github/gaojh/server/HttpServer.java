@@ -1,10 +1,10 @@
 package com.github.gaojh.server;
 
-import com.github.gaojh.config.ApplicationConfig;
-import com.github.gaojh.server.handler.HttpServerHandler;
 import cn.hutool.core.thread.NamedThreadFactory;
 import cn.hutool.log.Log;
 import cn.hutool.log.LogFactory;
+import com.github.gaojh.config.ApplicationConfig;
+import com.github.gaojh.server.handler.HttpServerHandler;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.*;
@@ -20,8 +20,6 @@ import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.stream.ChunkedWriteHandler;
 import io.netty.util.NetUtil;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * @author 高建华
