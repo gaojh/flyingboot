@@ -101,7 +101,7 @@ public class DemoInterceptor implements HandlerInterceptor {
 2、postHandle后置处理器，在调用业务方法之后调用。  
 3、afterCompletion此方法废弃，后期会删除。
 
-@Interceptor注解必须要加上，否则会扫描不到该过滤器。 
+@Interceptor注解必须要加上，否则会扫描不到该过滤器。  
 1、pathPatterns是用于匹配过滤的url。  
 2、ignorePathPatterns是用户匹配忽略过滤的url。  
 3、order指定过滤器的顺序
