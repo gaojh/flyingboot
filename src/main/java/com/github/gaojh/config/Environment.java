@@ -1,12 +1,10 @@
 package com.github.gaojh.config;
 
-import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.ClassUtil;
 import cn.hutool.setting.dialect.Props;
 
 import java.net.URL;
 import java.nio.charset.Charset;
-import java.util.Optional;
 import java.util.Properties;
 
 /**
@@ -22,13 +20,16 @@ public class Environment {
         URL url = ClassUtil.getResourceURL("application.properties");
         if (url != null) {
             props = new Props(url, Charset.forName("UTF-8"));
-        }else{
+        } else {
             props = new Props();
         }
 
         //再从系统配置项获取并覆盖
         initFromSystem();
-        ApplicationConfig.PORT = getInteger("server.port", 2019);
+        ApplicationConfig.PORT = getInteger("server.port", 8080);
+        ApplicationConfig.THREAD_POOL_CORE_SIZE = getInteger("flying.thread.core.size", 600);
+        ApplicationConfig.THREAD_POOL_MAX_SIZE = getInteger("flying.thread.max.size", 2000);
+        ApplicationConfig.THREAD_POOL_KEEP_ALIVE_TIME = getLong("flying.thread.keepalive.time", 0L);
     }
 
     private void initFromSystem() {
@@ -50,6 +51,22 @@ public class Environment {
 
     public Integer getInteger(String key, Integer defaultValue) {
         return props.getInt(key, defaultValue);
+    }
+
+    public Long getLong(String key) {
+        return props.getLong(key);
+    }
+
+    public Long getLong(String key, Long value) {
+        return props.getLong(key, value);
+    }
+
+    public Double getDouble(String key) {
+        return props.getDouble(key);
+    }
+
+    public Double getDouble(String key, Double value) {
+        return props.getDouble(key, value);
     }
 
     public Boolean getBoolean(String key) {
