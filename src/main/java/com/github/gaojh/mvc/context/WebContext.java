@@ -92,7 +92,7 @@ public class WebContext extends WebFactory {
             for (String path : interceptor.pathPatterns()) {
                 if (StrUtil.isNotBlank(path)) {
                     logger.debug("注册拦截器：{} ===> {}", path, clazz.getName());
-                    putInterceptor(path, obj);
+                    putInterceptor(interceptor, obj);
                 }
             }
         }

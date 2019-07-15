@@ -11,7 +11,7 @@ import org.slf4j.LoggerFactory;
  * @author 高建华
  * @date 2019-04-16 20:52
  */
-@Interceptor(pathPatterns = {"/demo"},order = 4)
+@Interceptor(pathPatterns = {"/demo"},order = 6)
 public class Demo2Interceptor implements HandlerInterceptor {
     private static Logger logger = LoggerFactory.getLogger(Demo2Interceptor.class);
     @Override

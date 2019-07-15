@@ -11,7 +11,6 @@ import org.slf4j.LoggerFactory;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.ToIntFunction;
 import java.util.stream.Collectors;
 
 /**
@@ -22,7 +21,7 @@ public class WebFactory {
 
     private static final Logger logger = LoggerFactory.getLogger(WebFactory.class);
     private ConcurrentHashMap<String, Route> routeMap = new ConcurrentHashMap<>(128);
-    private ConcurrentHashMap<String, List<HandlerInterceptor>> interceptorMap = new ConcurrentHashMap<>(128);
+    private ConcurrentHashMap<Interceptor, HandlerInterceptor> interceptorMap = new ConcurrentHashMap<>(128);
     private TreeMap<Integer, ApplicationRunner> setupMap = new TreeMap<>();
 
 
@@ -62,25 +61,18 @@ public class WebFactory {
     }
 
     public List<HandlerInterceptor> getInterceptor(String path) {
-        List<HandlerInterceptor> list = new ArrayList<>();
-        List<List<HandlerInterceptor>> list2 = interceptorMap.entrySet().stream().filter(entry -> PathMatcher.me.match(entry.getKey(), path)).map(Map.Entry::getValue).collect(Collectors.toList());
-        for (List<HandlerInterceptor> l : list2) {
-            list.addAll(l.stream().filter(handlerInterceptor -> {
-                Interceptor interceptor = handlerInterceptor.getClass().getAnnotation(Interceptor.class);
-                return Arrays.stream(interceptor.ignorePathPatterns()).noneMatch(s -> PathMatcher.me.match(s, path));
-            }).collect(Collectors.toList()));
-        }
-
-        return list.stream().sorted(Comparator.comparingInt(value -> {
-            Interceptor interceptor = value.getClass().getAnnotation(Interceptor.class);
-            return interceptor.order();
-        })).collect(Collectors.toList());
+        List<HandlerInterceptor> list;
+        list = interceptorMap.entrySet().stream()
+                .filter(entry -> Arrays.stream(entry.getKey().pathPatterns()).anyMatch(pattern -> PathMatcher.me.match(pattern, path)))
+                .filter(entry -> Arrays.stream(entry.getKey().ignorePathPatterns()).noneMatch(s -> PathMatcher.me.match(s, path)))
+                .sorted(Comparator.comparingInt(value -> value.getKey().order()))
+                .map(Map.Entry::getValue)
+                .collect(Collectors.toList());
+        return list;
     }
 
-    protected void putInterceptor(String path, HandlerInterceptor handlerInterceptor) {
-        List<HandlerInterceptor> list = interceptorMap.getOrDefault(path, new ArrayList<>());
-        list.add(handlerInterceptor);
-        interceptorMap.put(path, list);
+    protected void putInterceptor(Interceptor interceptor, HandlerInterceptor handlerInterceptor) {
+        interceptorMap.put(interceptor, handlerInterceptor);
     }
 
 
