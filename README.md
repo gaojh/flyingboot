@@ -1,10 +1,9 @@
 # flyingboot
 
 ## 项目介绍
-基于Netty的轻量级web快速开发框架。
-使用netty+completeableFuture 异步方式提高吞吐量。
-可用于网关开发等系统
-在使用习惯上模仿了spring的相关注解，学习成本低。
+基于Netty的轻量级web快速开发框架。  
+使用netty+completeableFuture 异步方式提高吞吐量。  
+可用于网关开发等系统，在使用习惯上模仿了spring的相关注解，学习成本低。
 
 不扯啥重复造轮子，这个框架是在做api网关的过程中抽取出来的，本着实用方便的原则，封装成了类似于springboot的样子。
 
@@ -18,7 +17,7 @@
 </dependency>
 ```
 ### 2、添加项目配置文件
-flyingboot默认读取application.properties配置文件中的配置
+flyingboot默认读取application.properties配置文件中的配置  
 所有配置项可以使用Environment来进行获取
 
 application.properties默认参数如下，如果需要修改，可以在文件中重新定制:
@@ -97,14 +96,14 @@ public class DemoInterceptor implements HandlerInterceptor {
     }
 }
 ```
-过滤器需要实现HandlerInterceptor接口，里面有三个方法
-1、preHandle前置处理器，在调用业务方法之前调用，如果返回true，继续调用下个过滤器，如果返回false，则不调用下个过滤器。 
-2、postHandle后置处理器，在调用业务方法之后调用。 
+过滤器需要实现HandlerInterceptor接口，里面有三个方法  
+1、preHandle前置处理器，在调用业务方法之前调用，如果返回true，继续调用下个过滤器，如果返回false，则不调用下个过滤器。  
+2、postHandle后置处理器，在调用业务方法之后调用。  
 3、afterCompletion此方法废弃，后期会删除。
 
-@Interceptor注解必须要加上，否则会扫描不到该过滤器。
-1、pathPatterns是用于匹配过滤的url。 
-2、ignorePathPatterns是用户匹配忽略过滤的url。 
+@Interceptor注解必须要加上，否则会扫描不到该过滤器。 
+1、pathPatterns是用于匹配过滤的url。  
+2、ignorePathPatterns是用户匹配忽略过滤的url。  
 3、order指定过滤器的顺序
 
 ### 6、如何使用动态Controller
