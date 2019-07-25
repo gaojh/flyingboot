@@ -1,5 +1,6 @@
 package com.github.gaojh.server.handler;
 
+import com.github.gaojh.ioc.annotation.Component;
 import com.github.gaojh.server.context.HttpContext;
 import com.github.gaojh.server.http.DefaultHttpDispatcher;
 import com.github.gaojh.server.http.HttpDispatcher;
@@ -23,11 +24,14 @@ public class HttpServerHandler extends ChannelInboundHandlerAdapter {
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        if (!(msg instanceof FullHttpRequest)) {
-            return;
+        if (msg instanceof FullHttpRequest) {
+            FullHttpRequest fullHttpRequest = (FullHttpRequest) msg;
+            handleHttpRequest(ctx, fullHttpRequest);
         }
-        FullHttpRequest fullHttpRequest = (FullHttpRequest) msg;
+    }
 
+
+    private void handleHttpRequest(ChannelHandlerContext ctx, FullHttpRequest fullHttpRequest) throws Exception {
         if (fullHttpRequest.method().equals(HttpMethod.OPTIONS)) {
             FullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
             response.headers().set(HttpHeaderNames.CONTENT_LENGTH, 0);
@@ -36,12 +40,13 @@ public class HttpServerHandler extends ChannelInboundHandlerAdapter {
             response.headers().set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_METHODS, "*");
 
             ctx.writeAndFlush(response);
-            ReferenceCountUtil.release(msg);
+            ReferenceCountUtil.release(fullHttpRequest);
             return;
         }
         HttpContext httpContext = new HttpContext(ctx, fullHttpRequest);
         httpDispatcher.doDispatcher(httpContext);
     }
+
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {

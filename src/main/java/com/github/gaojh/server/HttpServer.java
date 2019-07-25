@@ -1,9 +1,8 @@
 package com.github.gaojh.server;
 
 import cn.hutool.core.thread.NamedThreadFactory;
-import cn.hutool.log.Log;
-import cn.hutool.log.LogFactory;
 import com.github.gaojh.config.ApplicationConfig;
+import com.github.gaojh.ioc.annotation.Component;
 import com.github.gaojh.server.handler.HttpServerHandler;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.PooledByteBufAllocator;
@@ -20,18 +19,21 @@ import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.stream.ChunkedWriteHandler;
 import io.netty.util.NetUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @author 高建华
  * @date 2018/6/21 下午2:03
  */
+@Component
 public class HttpServer {
 
     private EventLoopGroup boss;
     private EventLoopGroup worker;
     private ServerBootstrap bootstrap;
 
-    private static final Log log = LogFactory.get();
+    private static final Logger log = LoggerFactory.getLogger(HttpServer.class);
 
     public HttpServer() {
         int bossSize = Integer.parseInt(System.getProperty("server.boss.size", "2"));
@@ -74,7 +76,7 @@ public class HttpServer {
     public synchronized void start() throws InterruptedException {
 
         ChannelFuture channelFuture = bootstrap.bind(ApplicationConfig.PORT).sync();
-        log.info("启动成功，端口：{}", ApplicationConfig.PORT);
+        log.info("启动成功HttpServer，端口：{}", ApplicationConfig.PORT);
         Channel channel = channelFuture.channel();
         channel.closeFuture().addListener(future -> log.info("停止服务成功，端口：{}", ApplicationConfig.PORT)).sync();
         // 监听服务器关闭监听
