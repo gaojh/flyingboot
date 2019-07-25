@@ -2,9 +2,7 @@ package com.github.gaojh.ioc.bean;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.collection.CollectionUtil;
-import cn.hutool.core.collection.ConcurrentHashSet;
 import cn.hutool.core.util.StrUtil;
-import cn.hutool.json.JSONUtil;
 import com.github.gaojh.ioc.annotation.Bean;
 import com.github.gaojh.ioc.annotation.Component;
 import com.github.gaojh.ioc.annotation.Configuration;
@@ -16,7 +14,6 @@ import java.lang.annotation.Annotation;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
@@ -30,7 +27,6 @@ public class BeanClassScanner implements Scanner {
 
     public BeanClassScanner() {
         List<Class<? extends Annotation>> annotationList = CollUtil.toList(Configuration.class, Component.class, Controller.class, Setup.class, Interceptor.class);
-
         scan(annotationList).forEach(clazz -> {
             String beanName = getBeanName(clazz);
             beanDefineClassMap.put(beanName, BeanClassDefine.builder().beanClass(clazz).beanName(beanName).isConfigurationBean(false).build());
@@ -50,7 +46,7 @@ public class BeanClassScanner implements Scanner {
     }
 
     private List<BeanClassDefine> getBeanClassOfType(Class<?> clazz) {
-        return beanDefineClassMap.values().stream().filter(beanClassDefine -> beanClassDefine.getBeanClass().isAssignableFrom(clazz)).collect(Collectors.toList());
+        return beanDefineClassMap.values().stream().filter(beanClassDefine -> clazz.isAssignableFrom(beanClassDefine.getBeanClass())).collect(Collectors.toList());
     }
 
     protected Collection<BeanClassDefine> getBeanClassSet() {
@@ -97,5 +93,4 @@ public class BeanClassScanner implements Scanner {
         return name;
 
     }
-
 }

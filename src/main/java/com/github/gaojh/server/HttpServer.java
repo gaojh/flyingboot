@@ -26,7 +26,6 @@ import org.slf4j.LoggerFactory;
  * @author 高建华
  * @date 2018/6/21 下午2:03
  */
-@Component
 public class HttpServer {
 
     private EventLoopGroup boss;
@@ -76,7 +75,10 @@ public class HttpServer {
     public synchronized void start() throws InterruptedException {
 
         ChannelFuture channelFuture = bootstrap.bind(ApplicationConfig.PORT).sync();
-        log.info("启动成功HttpServer，端口：{}", ApplicationConfig.PORT);
+        log.info("启动成功！端口：{}", ApplicationConfig.PORT);
+        if(ApplicationConfig.ENABLE_WEBSOCKET){
+            log.info("WebSocket已开启！端口：{}", ApplicationConfig.PORT);
+        }
         Channel channel = channelFuture.channel();
         channel.closeFuture().addListener(future -> log.info("停止服务成功，端口：{}", ApplicationConfig.PORT)).sync();
         // 监听服务器关闭监听

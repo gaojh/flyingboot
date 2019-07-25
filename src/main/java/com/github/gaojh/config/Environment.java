@@ -27,6 +27,7 @@ public class Environment {
         //再从系统配置项获取并覆盖
         initFromSystem();
         ApplicationConfig.PORT = getInteger("server.port", 8080);
+        ApplicationConfig.ENABLE_WEBSOCKET = getBoolean("flying.websocket.enable", false);
         ApplicationConfig.THREAD_POOL_CORE_SIZE = getInteger("flying.thread.core.size", 600);
         ApplicationConfig.THREAD_POOL_MAX_SIZE = getInteger("flying.thread.max.size", 2000);
         ApplicationConfig.THREAD_POOL_KEEP_ALIVE_TIME = getLong("flying.thread.keepalive.time", 0L);

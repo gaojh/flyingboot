@@ -18,6 +18,8 @@ public class ApplicationConfig {
      */
     public static Integer PORT = 8080;
 
+    public static Boolean ENABLE_WEBSOCKET = false;
+
     /**
      * 连接池相关
      */
