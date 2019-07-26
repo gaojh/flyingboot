@@ -8,15 +8,15 @@
 不扯啥重复造轮子，这个框架是在做api网关的过程中抽取出来的，本着实用方便的原则，封装成了类似于springboot的样子。
 
 ## 接入使用
-### 1、添加maven依赖
+### 1. 添加maven依赖
 ```xml
 <dependency>
     <groupId>com.github.gaojh</groupId>
     <artifactId>flyingboot</artifactId>
-    <version>2.1.3</version>
+    <version>2.1.5</version>
 </dependency>
 ```
-### 2、添加项目配置文件
+### 2. 添加项目配置文件
 flyingboot默认读取application.properties配置文件中的配置  
 所有配置项可以使用Environment来进行获取
 
@@ -35,7 +35,7 @@ flying.thread.max.size=2000
 flying.thread.keepalive.time=0
 ```
 
-### 3、新建启动类
+### 3. 新建启动类
 类似于springboot的Application类
 ```java
 @ComponentScan({"com.github.gaojh.example"})
@@ -47,7 +47,7 @@ public class FlyingbootDemo {
 ```
 如果不加@ComponentScan注解，则包扫描路径直接设置为启动的包路径。
 
-### 4、添加Controller
+### 4. 添加Controller
 ```java
 @Controller
 public class DemoController {
@@ -73,7 +73,7 @@ public class DemoController {
 ```
 到此时，一个简单的Flyingboot项目已经可以运行了，跟springboot很相似。
 
-### 5、如何使用过滤器
+### 5. 如何使用过滤器
 ```java
 @Interceptor(pathPatterns = {"/**"}, ignorePathPatterns = {"/hello"}, order = 5)
 public class DemoInterceptor implements HandlerInterceptor {
@@ -106,7 +106,7 @@ public class DemoInterceptor implements HandlerInterceptor {
 2、ignorePathPatterns是用户匹配忽略过滤的url。  
 3、order指定过滤器的顺序
 
-### 6、如何使用动态Controller
+### 6. 如何使用动态Controller
 1、首先定义Handler
 ```java
 @Component
@@ -142,6 +142,37 @@ public class RouterConfig {
 ```
 这样就可以添加动态的router
 
+### 7. 启用websocket
+在application.properties中添加配置  
+```properties
+flying.websocket.enable=true
+```
 
+添加websocketHandler
+```java
+@Component
+public class MyWebSocketHandler implements WebSocketHandler {
+
+    @Override
+    public void onHandshake(ChannelHandlerContext ctx, FullHttpRequest fullHttpRequest) throws Exception {
+        System.out.println(fullHttpRequest.uri());
+    }
+
+    @Override
+    public void onMessage(ChannelHandlerContext ctx, String msg) throws Exception {
+        System.out.println("msg: "+msg);
+        sendMessage(ctx,"回复："+msg);
+    }
+
+    @Override
+    public void onClose(ChannelHandlerContext ctx) throws Exception {
+
+    }
+
+}
+```
+
+这样websocket就可以使用了
 ## 其他
+相关example请参考flyingboot-test项目
 本项目还在不断的迭代中，欢迎关注并提出意见！
