@@ -29,13 +29,6 @@ public class HttpServerHandler extends ChannelInboundHandlerAdapter {
     }
 
     @Override
-    public void channelActive(ChannelHandlerContext ctx) throws Exception {
-        if (webSocketHandler != null) {
-            webSocketHandler.onOpen(ctx);
-        }
-    }
-
-    @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         if (webSocketHandler != null) {
             webSocketHandler.onClose(ctx);
@@ -74,6 +67,7 @@ public class HttpServerHandler extends ChannelInboundHandlerAdapter {
                 WebSocketServerHandshakerFactory.sendUnsupportedVersionResponse(ctx.channel());
             } else {
                 handshaker.handshake(ctx.channel(), fullHttpRequest);
+                webSocketHandler.onHandshake(ctx, fullHttpRequest);
             }
         }
     }

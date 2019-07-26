@@ -2,6 +2,7 @@ package com.github.gaojh.server.ws;
 
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 
 /**
@@ -11,7 +12,7 @@ import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
  */
 public interface WebSocketHandler {
 
-    void onOpen(ChannelHandlerContext ctx) throws Exception;
+    void onHandshake(ChannelHandlerContext ctx, FullHttpRequest fullHttpRequest) throws Exception;
 
     void onMessage(ChannelHandlerContext ctx, String msg) throws Exception;
 
