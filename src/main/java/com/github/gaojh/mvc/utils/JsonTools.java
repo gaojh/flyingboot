@@ -11,9 +11,11 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.*;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.util.JSONPObject;
+import lombok.Data;
 
 import java.io.IOException;
 import java.text.ParseException;
+import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.Date;
 import java.util.Map;
@@ -44,7 +46,7 @@ public class JsonTools {
         }
         // 设置输入时忽略在JSON字符串中存在但Java对象实际没有的属性
         mapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
-
+        mapper.findAndRegisterModules();
         SimpleModule javaTimeModule = new SimpleModule();
         javaTimeModule.addSerializer(Date.class, new JsonDateSerializer());
         javaTimeModule.addDeserializer(Date.class, new JsonDateDeserializer());
@@ -218,4 +220,5 @@ public class JsonTools {
     public ObjectMapper getMapper() {
         return mapper;
     }
+
 }

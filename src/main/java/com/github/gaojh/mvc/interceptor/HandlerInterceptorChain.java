@@ -22,7 +22,7 @@ public class HandlerInterceptorChain {
 
     public HandlerInterceptorChain(HandlerInterceptor... handlerInterceptors) {
         for (HandlerInterceptor handlerInterceptor : handlerInterceptors) {
-            addIntercepter(handlerInterceptor);
+            addInterceptor(handlerInterceptor);
         }
     }
 
@@ -30,11 +30,11 @@ public class HandlerInterceptorChain {
         this.handlerInterceptorList.addAll(handlerInterceptors);
     }
 
-    public void addIntercepter(HandlerInterceptor handlerInterceptor) {
+    public void addInterceptor(HandlerInterceptor handlerInterceptor) {
         this.handlerInterceptorList.add(handlerInterceptor);
     }
 
-    public void addIntercepters(List<HandlerInterceptor> handlerInterceptors) {
+    public void addInterceptors(List<HandlerInterceptor> handlerInterceptors) {
         this.handlerInterceptorList.addAll(handlerInterceptors);
     }
 

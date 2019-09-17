@@ -14,7 +14,7 @@ public class ApplicationConfig {
     public static String[] BASE_PACKAGE;
 
     /**
-     * 默认web端口
+     * 默认web和websocket端口
      */
     public static Integer PORT = 8080;
 
