@@ -13,7 +13,7 @@
 <dependency>
     <groupId>com.github.gaojh</groupId>
     <artifactId>flyingboot</artifactId>
-    <version>2.1.5</version>
+    <version>2.1.8</version>
 </dependency>
 ```
 ### 2. 添加项目配置文件
