@@ -38,18 +38,19 @@ public class HandlerInterceptorChain {
         this.handlerInterceptorList.addAll(handlerInterceptors);
     }
 
-    public boolean applyPreHandle(HttpRequest httpRequest, HttpResponse httpResponse) throws Exception {
+    public HandlerResponse applyPreHandle(HttpRequest httpRequest, HttpResponse httpResponse) throws Exception {
         if (!handlerInterceptorList.isEmpty()) {
             for (int i = 0; i < handlerInterceptorList.size(); i++) {
                 HandlerInterceptor handlerInterceptor = handlerInterceptorList.get(i);
-                if (!handlerInterceptor.preHandle(httpRequest, httpResponse)) {
-                    triggerAfterCompletion(httpRequest, httpResponse);
-                    return false;
+                HandlerResponse handlerResponse = handlerInterceptor.preHandle(httpRequest, httpResponse);
+                if (!handlerResponse.isSuccess()) {
+                    handlerInterceptor.afterCompletion(httpRequest, httpResponse);
+                    return handlerResponse;
                 }
                 this.interceptorIndex = i;
             }
         }
-        return true;
+        return HandlerResponse.success();
     }
 
     public void applyPostHandle(HttpRequest httpRequest, HttpResponse httpResponse) throws Exception {
@@ -61,12 +62,4 @@ public class HandlerInterceptorChain {
         }
     }
 
-    private void triggerAfterCompletion(HttpRequest httpRequest, HttpResponse httpResponse) throws Exception {
-        if (!handlerInterceptorList.isEmpty()) {
-            for (int i = this.interceptorIndex; i >= 0; i--) {
-                HandlerInterceptor handlerInterceptor = handlerInterceptorList.get(i);
-                handlerInterceptor.afterCompletion(httpRequest, httpResponse);
-            }
-        }
-    }
 }

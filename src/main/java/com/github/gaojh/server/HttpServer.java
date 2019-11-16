@@ -1,8 +1,6 @@
 package com.github.gaojh.server;
 
-import cn.hutool.core.thread.NamedThreadFactory;
 import com.github.gaojh.config.ApplicationConfig;
-import com.github.gaojh.ioc.annotation.Component;
 import com.github.gaojh.server.handler.HttpServerHandler;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.PooledByteBufAllocator;
@@ -19,6 +17,7 @@ import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.stream.ChunkedWriteHandler;
 import io.netty.util.NetUtil;
+import io.netty.util.concurrent.DefaultThreadFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,11 +37,11 @@ public class HttpServer {
         int bossSize = Integer.parseInt(System.getProperty("server.boss.size", "2"));
         int workerSize = Integer.parseInt(System.getProperty("server.worker.size", "4"));
         if (Epoll.isAvailable()) {
-            boss = new EpollEventLoopGroup(bossSize, new NamedThreadFactory("NettyServerBoss", true));
-            worker = new EpollEventLoopGroup(workerSize, new NamedThreadFactory("NettyServerWorker", true));
+            boss = new EpollEventLoopGroup(bossSize, new DefaultThreadFactory("NettyServerBoss", true));
+            worker = new EpollEventLoopGroup(workerSize, new DefaultThreadFactory("NettyServerWorker", true));
         } else {
-            boss = new NioEventLoopGroup(bossSize, new NamedThreadFactory("NettyServerBoss", true));
-            worker = new NioEventLoopGroup(workerSize, new NamedThreadFactory("NettyServerWorker", true));
+            boss = new NioEventLoopGroup(bossSize, new DefaultThreadFactory("NettyServerBoss", true));
+            worker = new NioEventLoopGroup(workerSize, new DefaultThreadFactory("NettyServerWorker", true));
         }
         bootstrap = new ServerBootstrap();
 

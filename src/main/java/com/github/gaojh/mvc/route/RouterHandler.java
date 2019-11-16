@@ -14,5 +14,5 @@ import java.util.Map;
 @FunctionalInterface
 public interface RouterHandler {
 
-    public Object handle(HttpRequest httpRequest);
+    Object handle(HttpRequest httpRequest);
 }

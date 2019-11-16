@@ -10,7 +10,7 @@ import com.github.gaojh.server.HttpServer;
  * @author 高建华
  * @date 2018/7/6 下午2:03
  */
-public class Flying {
+public final class Flying {
 
     public static void run(Class<?> source) {
 

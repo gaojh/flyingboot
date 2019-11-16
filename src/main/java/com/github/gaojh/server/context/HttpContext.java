@@ -1,6 +1,5 @@
 package com.github.gaojh.server.context;
 
-import com.github.gaojh.mvc.interceptor.HandlerInterceptor;
 import com.github.gaojh.server.http.DefaultHttpRequest;
 import com.github.gaojh.server.http.DefaultHttpResponse;
 import com.github.gaojh.server.http.HttpRequest;

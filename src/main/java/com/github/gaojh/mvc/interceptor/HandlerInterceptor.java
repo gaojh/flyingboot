@@ -9,7 +9,7 @@ import com.github.gaojh.server.http.HttpResponse;
  */
 public interface HandlerInterceptor {
 
-    boolean preHandle(HttpRequest httpRequest, HttpResponse httpResponse) throws Exception;
+    HandlerResponse preHandle(HttpRequest httpRequest, HttpResponse httpResponse) throws Exception;
 
     void postHandle(HttpRequest httpRequest, HttpResponse httpResponse) throws Exception;
 

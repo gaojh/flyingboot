@@ -7,6 +7,7 @@ import cn.hutool.core.util.StrUtil;
 import com.github.gaojh.ioc.context.ApplicationUtil;
 import com.github.gaojh.mvc.context.WebContext;
 import com.github.gaojh.mvc.interceptor.HandlerInterceptorChain;
+import com.github.gaojh.mvc.interceptor.HandlerResponse;
 import com.github.gaojh.mvc.route.DefaultRouter;
 import com.github.gaojh.mvc.route.Route;
 import com.github.gaojh.mvc.route.Router;
@@ -49,7 +50,8 @@ public class DefaultHttpDispatcher implements HttpDispatcher {
         HandlerInterceptorChain interceptorChain = new HandlerInterceptorChain(webContext.getInterceptor(url));
 
         //如果是反向代理模式，直接调用对应的route
-        if (interceptorChain.applyPreHandle(httpRequest, httpResponse)) {
+        HandlerResponse handlerResponse = interceptorChain.applyPreHandle(httpRequest, httpResponse);
+        if (handlerResponse.isSuccess()) {
             if (StrUtil.contains(url, '.')) {
                 //认为是静态资源
                 httpResponse.success(true).data(getStaticResource(httpRequest.request(), url));
@@ -67,7 +69,7 @@ public class DefaultHttpDispatcher implements HttpDispatcher {
                 }
             }
         } else {
-            httpResponse.success(false).msg("已拦截").httpResponseStatus(HttpResponseStatus.FORBIDDEN);
+            httpResponse.success(false).msg(handlerResponse.getMsg()).httpResponseStatus(HttpResponseStatus.FORBIDDEN);
             future = CompletableFuture.completedFuture(httpContext);
         }
 

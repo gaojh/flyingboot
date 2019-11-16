@@ -6,19 +6,19 @@
 
     <groupId>com.github.gaojh</groupId>
     <artifactId>flyingboot</artifactId>
-    <version>2.1.8</version>
+    <version>2.1.10</version>
 
     <dependencies>
         <dependency>
             <groupId>io.netty</groupId>
             <artifactId>netty-all</artifactId>
-            <version>4.1.42.Final</version>
+            <version>4.1.43.Final</version>
         </dependency>
 
         <dependency>
             <groupId>cn.hutool</groupId>
             <artifactId>hutool-all</artifactId>
-            <version>4.6.5</version>
+            <version>5.0.5</version>
         </dependency>
 
         <dependency>
@@ -35,15 +35,15 @@
         </dependency>
 
         <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-api</artifactId>
-            <version>1.7.28</version>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+            <version>1.2.3</version>
         </dependency>
 
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
-            <version>2.10.0</version>
+            <version>2.10.1</version>
         </dependency>
 
     </dependencies>

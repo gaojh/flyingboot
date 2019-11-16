@@ -2,9 +2,10 @@ package com.github.gaojh.config;
 
 import cn.hutool.core.util.ClassUtil;
 import cn.hutool.setting.dialect.Props;
+import cn.hutool.system.SystemUtil;
 
 import java.net.URL;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.Properties;
 
 /**
@@ -17,9 +18,9 @@ public class Environment {
 
     public Environment() {
         //先从配置文件加载
-        URL url = ClassUtil.getResourceURL("application.properties");
+        URL url = ClassUtil.getResourceURL(System.getProperty("flying.application", "application.properties"));
         if (url != null) {
-            props = new Props(url, Charset.forName("UTF-8"));
+            props = new Props(url, StandardCharsets.UTF_8);
         } else {
             props = new Props();
         }

@@ -11,7 +11,7 @@ import io.netty.handler.codec.http.multipart.*;
 
 import java.io.IOException;
 import java.net.URLConnection;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.*;
 
@@ -36,7 +36,7 @@ public class DefaultHttpRequest implements HttpRequest {
         this.httpRequest = httpRequest;
         this.ctx = ctx;
         this.keepAlive = HttpUtil.isKeepAlive(httpRequest);
-        this.body = httpRequest.content().toString(Charset.forName("UTF-8"));
+        this.body = httpRequest.content().toString(StandardCharsets.UTF_8);
         init(httpRequest);
     }
 

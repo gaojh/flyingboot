@@ -30,7 +30,7 @@ public class MimeTypeUtils {
     }
 
     public static String getContentType(String url) {
-        if (StrUtil.containsAny(url, ".")) {
+        if (StrUtil.containsAny(url, ".")&& url.contains(".")) {
             String ext = StrUtil.subAfter(url, ".",true).toLowerCase();
             String contentType = map.get(ext);
             if (StrUtil.isNotBlank(contentType)) {

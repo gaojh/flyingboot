@@ -2,20 +2,22 @@ package com.github.gaojh.mvc.utils;
 
 import cn.hutool.core.date.format.FastDateFormat;
 import cn.hutool.core.util.StrUtil;
-import cn.hutool.log.Log;
-import cn.hutool.log.LogFactory;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.*;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.util.JSONPObject;
-import lombok.Data;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.text.ParseException;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Collection;
 import java.util.Date;
 import java.util.Map;
@@ -25,8 +27,9 @@ import java.util.Map;
  * @date 2018-12-26 15:18
  */
 public class JsonTools {
-    private static Log logger = LogFactory.get(JsonTools.class);
+    private static final Logger logger = LoggerFactory.getLogger(JsonTools.class);
     private static String SIMPLE_FORMAT = "yyyy-MM-dd HH:mm:ss";
+    private static String SIMPLE_DATE_FORMAT = "yyyy-MM-dd";
 
     public static final JsonTools DEFAULT = new JsonTools();
     public static final JsonTools NON_NULL = nonNullMapper();
@@ -50,6 +53,12 @@ public class JsonTools {
         SimpleModule javaTimeModule = new SimpleModule();
         javaTimeModule.addSerializer(Date.class, new JsonDateSerializer());
         javaTimeModule.addDeserializer(Date.class, new JsonDateDeserializer());
+
+        javaTimeModule.addSerializer(LocalDate.class, new JsonLocalDateSerializer());
+        javaTimeModule.addDeserializer(LocalDate.class, new JsonLocalDateDeserializer());
+
+        javaTimeModule.addSerializer(LocalDateTime.class, new JsonLocalDateTimeSerializer());
+        javaTimeModule.addDeserializer(LocalDateTime.class, new JsonLocalDateTimeDeserializer());
         mapper.registerModule(javaTimeModule);
     }
 
@@ -80,6 +89,50 @@ public class JsonTools {
                 throw new IOException(e.getMessage());
             }
 
+        }
+    }
+
+    /**
+     * LocalDate序列化
+     */
+    public static class JsonLocalDateSerializer extends JsonSerializer<LocalDate> {
+
+        @Override
+        public void serialize(LocalDate localDate, JsonGenerator jsonGenerator, SerializerProvider serializerProvider) throws IOException {
+            jsonGenerator.writeString(localDate.format(DateTimeFormatter.ofPattern(SIMPLE_DATE_FORMAT)));
+        }
+    }
+
+    /**
+     * LocalDate反序列化
+     */
+    public static class JsonLocalDateDeserializer extends JsonDeserializer<LocalDate> {
+
+        @Override
+        public LocalDate deserialize(JsonParser jsonParser, DeserializationContext deserializationContext) throws IOException, JsonProcessingException {
+            return LocalDate.parse(jsonParser.getValueAsString(), DateTimeFormatter.ofPattern(SIMPLE_DATE_FORMAT));
+        }
+    }
+
+    /**
+     * LocalDateTime序列化
+     */
+    public static class JsonLocalDateTimeSerializer extends JsonSerializer<LocalDateTime> {
+
+        @Override
+        public void serialize(LocalDateTime localDateTime, JsonGenerator jsonGenerator, SerializerProvider serializerProvider) throws IOException {
+            jsonGenerator.writeString(localDateTime.format(DateTimeFormatter.ofPattern(SIMPLE_FORMAT)));
+        }
+    }
+
+    /**
+     * LocalDateTime反序列化
+     */
+    public static class JsonLocalDateTimeDeserializer extends JsonDeserializer<LocalDateTime> {
+
+        @Override
+        public LocalDateTime deserialize(JsonParser jsonParser, DeserializationContext deserializationContext) throws IOException, JsonProcessingException {
+            return LocalDateTime.parse(jsonParser.getValueAsString(), DateTimeFormatter.ofPattern(SIMPLE_FORMAT));
         }
     }
 

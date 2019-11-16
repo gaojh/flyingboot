@@ -12,6 +12,7 @@ import java.lang.reflect.Modifier;
  */
 public class ClassUtils {
 
+
     public static String[] getMethodParamNames(final Method m) {
         final String[] paramNames = new String[m.getParameterTypes().length];
         final String n = m.getDeclaringClass().getName();
@@ -70,8 +71,6 @@ public class ClassUtils {
         }
         return true;
     }
-
-
 
 
 }
