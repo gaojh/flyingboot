@@ -12,7 +12,8 @@ public interface Router {
 
     /**
      * 路由处理
-     *
+     * @param httpContext http上下文
+     * @param route 路由定义
      * @return
      * @throws Exception
      */

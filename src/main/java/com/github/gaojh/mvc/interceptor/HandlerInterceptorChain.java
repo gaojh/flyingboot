@@ -14,7 +14,7 @@ public class HandlerInterceptorChain {
 
 
     private List<HandlerInterceptor> handlerInterceptorList = new ArrayList<>();
-    private int interceptorIndex = -1;
+    private int interceptorIndex = 0;
 
     public HandlerInterceptorChain() {
         this((HandlerInterceptor) null);
@@ -34,17 +34,12 @@ public class HandlerInterceptorChain {
         this.handlerInterceptorList.add(handlerInterceptor);
     }
 
-    public void addInterceptors(List<HandlerInterceptor> handlerInterceptors) {
-        this.handlerInterceptorList.addAll(handlerInterceptors);
-    }
-
     public HandlerResponse applyPreHandle(HttpRequest httpRequest, HttpResponse httpResponse) throws Exception {
         if (!handlerInterceptorList.isEmpty()) {
             for (int i = 0; i < handlerInterceptorList.size(); i++) {
                 HandlerInterceptor handlerInterceptor = handlerInterceptorList.get(i);
                 HandlerResponse handlerResponse = handlerInterceptor.preHandle(httpRequest, httpResponse);
                 if (!handlerResponse.isSuccess()) {
-                    handlerInterceptor.afterCompletion(httpRequest, httpResponse);
                     return handlerResponse;
                 }
                 this.interceptorIndex = i;
@@ -55,7 +50,7 @@ public class HandlerInterceptorChain {
 
     public void applyPostHandle(HttpRequest httpRequest, HttpResponse httpResponse) throws Exception {
         if (!handlerInterceptorList.isEmpty()) {
-            for (int i = handlerInterceptorList.size() - 1; i >= 0; i--) {
+            for (int i = this.interceptorIndex; i >= 0; i--) {
                 HandlerInterceptor handlerInterceptor = handlerInterceptorList.get(i);
                 handlerInterceptor.postHandle(httpRequest, httpResponse);
             }

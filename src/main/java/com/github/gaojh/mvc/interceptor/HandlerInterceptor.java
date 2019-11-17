@@ -13,5 +13,4 @@ public interface HandlerInterceptor {
 
     void postHandle(HttpRequest httpRequest, HttpResponse httpResponse) throws Exception;
 
-    void afterCompletion(HttpRequest httpRequest, HttpResponse httpResponse) throws Exception;
 }

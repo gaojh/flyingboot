@@ -13,7 +13,7 @@
 <dependency>
     <groupId>com.github.gaojh</groupId>
     <artifactId>flyingboot</artifactId>
-    <version>2.1.8</version>
+    <version>2.1.10</version>
 </dependency>
 ```
 ### 2. 添加项目配置文件
@@ -80,9 +80,9 @@ public class DemoInterceptor implements HandlerInterceptor {
     private static Logger logger = LoggerFactory.getLogger(DemoInterceptor.class);
 
     @Override
-    public boolean preHandle(HttpRequest httpRequest, HttpResponse httpResponse) throws Exception {
+    public HandlerResponse preHandle(HttpRequest httpRequest, HttpResponse httpResponse) throws Exception {
         logger.info("demo");
-        return true;
+        return HandlerResponse.success();
     }
 
     @Override
@@ -90,16 +90,11 @@ public class DemoInterceptor implements HandlerInterceptor {
         logger.info("demo postHandle");
     }
 
-    @Override
-    public void afterCompletion(HttpRequest httpRequest, HttpResponse httpResponse) throws Exception {
-        logger.info("demo afterCompletion");
-    }
 }
 ```
 过滤器需要实现HandlerInterceptor接口，里面有三个方法  
 1、preHandle前置处理器，在调用业务方法之前调用，如果返回true，继续调用下个过滤器，如果返回false，则不调用下个过滤器。  
 2、postHandle后置处理器，在调用业务方法之后调用。  
-3、afterCompletion此方法废弃，后期会删除。
 
 @Interceptor注解必须要加上，否则会扫描不到该过滤器。  
 1、pathPatterns是用于匹配过滤的url。  
