@@ -24,11 +24,6 @@ public class DefaultHttpResponse implements HttpResponse {
     }
 
     @Override
-    public ChannelHandlerContext ctx() {
-        return ctx;
-    }
-
-    @Override
     public HttpResponse success(boolean res) {
         this.success = res;
         return this;

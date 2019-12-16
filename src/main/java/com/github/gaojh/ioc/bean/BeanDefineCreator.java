@@ -5,9 +5,9 @@ import cn.hutool.core.util.StrUtil;
 import com.github.gaojh.config.Environment;
 import com.github.gaojh.ioc.annotation.Autowired;
 import com.github.gaojh.ioc.annotation.Value;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Executable;
 import java.lang.reflect.Field;
@@ -22,45 +22,53 @@ import java.util.stream.Collectors;
  * @author 高建华
  * @date 2019-04-28 16:37
  */
-public class BeanDefineCreator extends BeanClassScanner {
-
-    private static final Logger logger = LoggerFactory.getLogger(BeanDefineCreator.class);
+@Slf4j
+public class BeanDefineCreator extends BeanClassScanner implements BeanCreator {
 
     private final ConcurrentHashMap<String, BeanDefine> beanDefineMap = new ConcurrentHashMap<>();
 
     private Environment environment;
 
-    public BeanDefineCreator() {
-        this.environment = new Environment();
+    public BeanDefineCreator(Environment environment) {
+        super(environment);
         this.createBeanDefine(environment);
         initBeans();
     }
 
-    protected BeanDefine getBeanDefine(String name) {
+    @Override
+    public BeanDefine getBeanDefine(String name) {
         return beanDefineMap.get(name);
     }
 
-    protected BeanDefine getBeanDefine(Class<?> clazz) {
+    @Override
+    public BeanDefine getBeanDefine(Class<?> clazz) {
         return beanDefineMap.get(getBeanName(clazz));
     }
 
-    protected BeanDefine createBeanDefine(Object object) {
+    @Override
+    public BeanDefine createBeanDefine(Object object) {
         BeanDefine beanDefine = new BeanDefine(object);
         String name = getBeanName(beanDefine.getType());
         beanDefineMap.put(name, beanDefine);
         return beanDefine;
     }
 
-    protected BeanDefine createBeanDefine(String name, Object object) {
+    @Override
+    public BeanDefine createBeanDefine(String name, Object object) {
         BeanDefine beanDefine = new BeanDefine(object);
         beanDefineMap.put(name, beanDefine);
         return beanDefine;
     }
 
+    @Override
+    public List<BeanDefine> getBeanDefineByAnnotation(Class<? extends Annotation> annotationClass) {
+        return beanDefineMap.values().stream().filter(beanDefine -> beanDefine.getType().isAnnotationPresent(annotationClass)).collect(Collectors.toList());
+    }
+
     private void initBeans() {
-        getBeanClassSet().forEach(beanClassDefine -> {
+        getClassDefines().forEach(classDefine -> {
             try {
-                createBeanDefine(beanClassDefine.getBeanClass());
+                createBeanDefine(classDefine.getBeanClass());
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -73,35 +81,35 @@ public class BeanDefineCreator extends BeanClassScanner {
      * @param clazz
      * @return
      */
-    private BeanDefine createBeanDefine(Class<?> clazz) throws Exception {
+    public BeanDefine createBeanDefine(Class<?> clazz) throws Exception {
         String name = getBeanName(clazz);
         if (beanDefineMap.containsKey(name)) {
             return beanDefineMap.get(name);
         }
-        BeanClassDefine beanClassDefine = getBeanClassDefine(name);
-        if (beanClassDefine == null) {
+        ClassDefine classDefine = getClassDefine(name);
+        if (classDefine == null) {
             throw new RuntimeException("未找到到该类，可能未加入IOC管理：" + name);
         }
 
         Object object;
-        if(beanClassDefine.isConfigurationBean()){
-            BeanDefine configurationBeanDefine = createBeanDefine(beanClassDefine.getConfigurationClass());
-            Method method = beanClassDefine.getMethod();
+        if (classDefine.isConfigurationBean()) {
+            BeanDefine configurationBeanDefine = createBeanDefine(classDefine.getConfigurationClass());
+            Method method = classDefine.getMethod();
             if (method.getParameterCount() == 0) {
                 object = method.invoke(configurationBeanDefine.getObject());
             } else {
                 object = method.invoke(configurationBeanDefine.getObject(), getParameters(method));
             }
-            logger.debug("加载Configuration Bean：{}", name);
-            return createBeanDefine(beanClassDefine.getBeanName(), object);
-        }else{
-            Class<?> finalClass = beanClassDefine.getBeanClass();
-            Constructor[] constructors = finalClass.getConstructors();
+            log.debug("加载Configuration Bean：{}", name);
+            return createBeanDefine(classDefine.getBeanName(), object);
+        } else {
+            Class<?> finalClass = classDefine.getBeanClass();
+            Constructor<?>[] constructors = finalClass.getConstructors();
 
             if (constructors.length == 0) {
                 object = finalClass.newInstance();
             } else {
-                Constructor constructor = getAutowriedContructor(finalClass);
+                Constructor<?> constructor = getAutowriedContructor(finalClass);
                 if (constructor.getParameterCount() == 0) {
                     object = finalClass.newInstance();
                 } else {
@@ -114,7 +122,7 @@ public class BeanDefineCreator extends BeanClassScanner {
             beanDefineMap.put(name, beanDefine);
             //设置Field
             setFields(beanDefine);
-            logger.debug("加载Bean：{}", name);
+            log.debug("加载Bean：{}", name);
             return beanDefine;
         }
     }
@@ -128,12 +136,12 @@ public class BeanDefineCreator extends BeanClassScanner {
      * @param clazz
      * @return
      */
-    private Constructor getAutowriedContructor(Class clazz) {
-        Constructor[] constructors = clazz.getDeclaredConstructors();
+    private Constructor<?> getAutowriedContructor(Class<?> clazz) {
+        Constructor<?>[] constructors = clazz.getDeclaredConstructors();
 
-        List<Constructor> list = Arrays.stream(clazz.getConstructors()).filter(constructor -> constructor.isAnnotationPresent(Autowired.class)).collect(Collectors.toList());
+        List<Constructor<?>> list = Arrays.stream(clazz.getConstructors()).filter(constructor -> constructor.isAnnotationPresent(Autowired.class)).collect(Collectors.toList());
         if (list.size() == 0) {
-            for (Constructor constructor : constructors) {
+            for (Constructor<?> constructor : constructors) {
                 if (constructor.getParameterCount() == 0) {
                     return constructor;
                 }
@@ -153,9 +161,9 @@ public class BeanDefineCreator extends BeanClassScanner {
      * @return
      */
     private <T extends Executable> Object[] getParameters(T t) throws Exception {
-        Class[] parameters = t.getParameterTypes();
+        Class<?>[] parameters = t.getParameterTypes();
         List<Object> values = new ArrayList<>(parameters.length);
-        for (Class c : parameters) {
+        for (Class<?> c : parameters) {
             String parameterName = getBeanName(c);
             BeanDefine beanDefine = beanDefineMap.get(parameterName);
             if (beanDefine == null) {
@@ -202,10 +210,6 @@ public class BeanDefineCreator extends BeanClassScanner {
             String key = StrUtil.subBetween(valueStr, "${", "}");
             ReflectUtil.setFieldValue(beanDefine.getObject(), field, environment.getString(key));
         }
-    }
-
-    public static void main(String[] args) {
-        System.out.println(BeanDefineCreator.class.isAssignableFrom(BeanDefineCreator.class));
     }
 
 }

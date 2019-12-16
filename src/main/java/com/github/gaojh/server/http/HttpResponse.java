@@ -1,6 +1,5 @@
 package com.github.gaojh.server.http;
 
-import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.HttpResponseStatus;
 
 /**
@@ -8,8 +7,6 @@ import io.netty.handler.codec.http.HttpResponseStatus;
  * @date 2018/7/5 上午11:18
  */
 public interface HttpResponse {
-
-    ChannelHandlerContext ctx();
 
     HttpResponse success(boolean res);
 

@@ -2,11 +2,17 @@ package com.github.gaojh.config;
 
 import cn.hutool.core.util.ClassUtil;
 import cn.hutool.setting.dialect.Props;
-import cn.hutool.system.SystemUtil;
+import io.netty.util.concurrent.DefaultThreadFactory;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.Properties;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @author 高建华
@@ -14,7 +20,28 @@ import java.util.Properties;
  */
 public class Environment {
 
+    /**
+     * 基础包路径
+     */
+    @Getter
+    @Setter
+    private String[] baseScanPackages;
+
+    /**
+     * 默认web和websocket端口
+     */
+    @Getter
+    @Setter
+    private int port = 8080;
+
+    @Getter
+    @Setter
+    private boolean enableWebsocket = false;
+
     private Props props;
+
+    @Getter
+    private ExecutorService executorService;
 
     public Environment() {
         //先从配置文件加载
@@ -27,11 +54,18 @@ public class Environment {
 
         //再从系统配置项获取并覆盖
         initFromSystem();
-        ApplicationConfig.PORT = getInteger("server.port", 8080);
-        ApplicationConfig.ENABLE_WEBSOCKET = getBoolean("flying.websocket.enable", false);
-        ApplicationConfig.THREAD_POOL_CORE_SIZE = getInteger("flying.thread.core.size", 600);
-        ApplicationConfig.THREAD_POOL_MAX_SIZE = getInteger("flying.thread.max.size", 2000);
-        ApplicationConfig.THREAD_POOL_KEEP_ALIVE_TIME = getLong("flying.thread.keepalive.time", 0L);
+
+        this.port = getInteger("server.port", 8080);
+        this.enableWebsocket = getBoolean("flying.websocket.enable", false);
+        /**
+         * 连接池相关
+         */
+        Integer threadPoolCoreSize = getInteger("flying.thread.core.size", 600);
+        Integer threadPoolMaxSize = getInteger("flying.thread.max.size", 2000);
+        Long threadPoolKeepAliveTime = getLong("flying.thread.keepalive.time", 0L);
+
+        //建立全局线程池
+        executorService = new ThreadPoolExecutor(threadPoolCoreSize, threadPoolMaxSize, threadPoolKeepAliveTime, TimeUnit.SECONDS, new SynchronousQueue<>(), new DefaultThreadFactory("flying-pool"));
     }
 
     private void initFromSystem() {

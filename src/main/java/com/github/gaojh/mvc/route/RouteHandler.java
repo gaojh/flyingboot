@@ -8,14 +8,14 @@ import java.util.concurrent.CompletableFuture;
  * @author 高建华
  * @date 2019-03-30 16:18
  */
-public interface Router {
+public interface RouteHandler {
 
     /**
      * 路由处理
      * @param httpContext http上下文
-     * @param route 路由定义
+     * @param routeDefine 路由定义
      * @return
      * @throws Exception
      */
-    CompletableFuture<HttpContext> invoke(HttpContext httpContext, Route route) throws Exception;
+    CompletableFuture<HttpContext> invoke(HttpContext httpContext, RouteDefine routeDefine) throws Exception;
 }

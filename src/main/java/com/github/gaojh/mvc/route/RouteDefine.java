@@ -3,6 +3,7 @@ package com.github.gaojh.mvc.route;
 import com.github.gaojh.mvc.annotation.RequestMethod;
 import lombok.Builder;
 import lombok.Data;
+import lombok.experimental.Accessors;
 
 import java.lang.reflect.Method;
 
@@ -11,15 +12,16 @@ import java.lang.reflect.Method;
  * @date 2018/6/7 下午10:12
  */
 @Data
-@Builder
-public class Route {
+@Accessors(chain = true)
+public class RouteDefine {
+
+    private Class<?> type;
     /**
      * controller的instance
      */
-    private Class<?> type;
     private Object object;
     private Method method;
-    private String urlMapping;
+    private String path;
     private RequestMethod[] requestMethod;
 
     private String[] paramNames;

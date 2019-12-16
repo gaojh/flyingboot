@@ -9,9 +9,24 @@ import lombok.Data;
 @Data
 public class BeanDefine {
 
+    /**
+     * bean名称
+     */
     private String name;
+
+    /**
+     * bean class
+     */
     private Class<?> type;
+
+    /**
+     * bean instance
+     */
     private Object object;
+
+    /**
+     * 是否是单例，默认都是单例，此参数未使用
+     */
     private boolean isSingleton;
 
     public BeanDefine(Object object) {

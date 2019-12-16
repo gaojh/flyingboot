@@ -1,7 +1,7 @@
 package com.github.gaojh.server.handler;
 
-import com.github.gaojh.config.ApplicationConfig;
-import com.github.gaojh.ioc.context.ApplicationUtil;
+import com.github.gaojh.config.Environment;
+import com.github.gaojh.ioc.context.AppUtil;
 import com.github.gaojh.server.context.HttpContext;
 import com.github.gaojh.server.http.DefaultHttpDispatcher;
 import com.github.gaojh.server.http.HttpDispatcher;
@@ -12,20 +12,24 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.http.*;
 import io.netty.handler.codec.http.websocketx.*;
 import io.netty.util.ReferenceCountUtil;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * @author 高建华
  * @date 2019-03-30 22:40
  */
+@Slf4j
 public class HttpServerHandler extends ChannelInboundHandlerAdapter {
 
     private HttpDispatcher httpDispatcher;
     private WebSocketHandler webSocketHandler;
     private WebSocketServerHandshaker handshaker;
+    private Environment environment;
 
-    public HttpServerHandler() {
+    public HttpServerHandler(Environment environment) {
+        this.environment = environment;
         httpDispatcher = new DefaultHttpDispatcher();
-        webSocketHandler = ApplicationUtil.applicationContext.getBean(WebSocketHandler.class);
+        webSocketHandler = AppUtil.appContext.getBean(WebSocketHandler.class);
     }
 
     @Override
@@ -61,9 +65,9 @@ public class HttpServerHandler extends ChannelInboundHandlerAdapter {
             HttpContext httpContext = new HttpContext(ctx, fullHttpRequest);
             httpDispatcher.doDispatcher(httpContext);
         } else {
-            WebSocketServerHandshakerFactory wsFactory = new WebSocketServerHandshakerFactory("ws://localhost:" + ApplicationConfig.PORT, null, false);
+            WebSocketServerHandshakerFactory wsFactory = new WebSocketServerHandshakerFactory("ws://localhost:" + environment.getPort(), null, false);
             handshaker = wsFactory.newHandshaker(fullHttpRequest);
-            if (handshaker == null || !ApplicationConfig.ENABLE_WEBSOCKET) {
+            if (handshaker == null || !environment.isEnableWebsocket()) {
                 WebSocketServerHandshakerFactory.sendUnsupportedVersionResponse(ctx.channel());
             } else {
                 handshaker.handshake(ctx.channel(), fullHttpRequest);

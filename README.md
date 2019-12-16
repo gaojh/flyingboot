@@ -13,7 +13,7 @@
 <dependency>
     <groupId>com.github.gaojh</groupId>
     <artifactId>flyingboot</artifactId>
-    <version>2.1.10</version>
+    <version>3.0.0</version>
 </dependency>
 ```
 ### 2. 添加项目配置文件
@@ -41,7 +41,7 @@ flying.thread.keepalive.time=0
 @ComponentScan({"com.github.gaojh.example"})
 public class FlyingbootDemo {
     public static void main(String[] args) {
-        Flying.run(FlyingbootDemo.class);
+        new Flying().port(12345).run(FlyingbootDemo.class);
     }
 }
 ```
@@ -117,30 +117,27 @@ public class DemoDynamicHandler implements RouterHandler {
 
 2、其次添加动态路由到Flyingboot
 ```java
-@Configuration
-public class RouterConfig {
-
-    @Autowired
-    private DemoDynamicHandler demoDynamicHandler;
-    
-    @Autowired
-    private DemoDynamicHandler2 demoDynamicHandler2;
-
-    @Autowired
-    private HttpClient httpClient;
-
-    @Bean
-    public RouterFunction router() {
-        return Routers.route().GET("/api/baidu", httpRequest -> httpClient.request("http://www.taobao.com", httpRequest)).GET("/hello", demoDynamicHandler).GET("/hello2", demoDynamicHandler2).build();
+@com.github.gaojh.mvc.annotation.Setup
+public class Setup implements SetupRunner {
+    @Override
+    public void run() {
+        Routers.me.get("/taobao", httpRequest -> "123123123");
     }
 }
 ```
 这样就可以添加动态的router
+Routers可以动态添加路由，非常适合动态路由使用场景
 
 ### 7. 启用websocket
 在application.properties中添加配置  
 ```properties
 flying.websocket.enable=true
+```
+或者
+```java
+public static void main(String[] args) {
+    new Flying().port(11111).enableWebsocket(true).run(FlyingbootDemo.class);
+}
 ```
 
 添加websocketHandler

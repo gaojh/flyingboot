@@ -4,8 +4,9 @@ import cn.hutool.core.convert.Convert;
 import cn.hutool.core.util.ArrayUtil;
 import cn.hutool.core.util.StrUtil;
 import com.fasterxml.jackson.databind.JavaType;
-import com.github.gaojh.ioc.context.ApplicationContext;
-import com.github.gaojh.ioc.context.ApplicationUtil;
+import com.github.gaojh.config.Environment;
+import com.github.gaojh.ioc.context.AppContext;
+import com.github.gaojh.ioc.context.AppUtil;
 import com.github.gaojh.mvc.annotation.PathParam;
 import com.github.gaojh.mvc.annotation.RequestBody;
 import com.github.gaojh.mvc.annotation.RequestMethod;
@@ -15,8 +16,7 @@ import com.github.gaojh.mvc.utils.PathMatcher;
 import com.github.gaojh.server.context.HttpContext;
 import com.github.gaojh.server.http.HttpRequest;
 import com.github.gaojh.server.http.HttpResponse;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -32,66 +32,67 @@ import java.util.concurrent.ExecutorService;
  * @author 高建华
  * @date 2019-03-31 22:49
  */
-public class DefaultRouter implements Router {
+@Slf4j
+public class SimpleRouteHandler implements RouteHandler {
 
-    private static final Logger logger = LoggerFactory.getLogger(DefaultRouter.class);
     private ExecutorService executorService;
 
     @Override
-    public CompletableFuture<HttpContext> invoke(HttpContext httpContext, Route route) throws Exception {
-        ApplicationContext applicationContext = ApplicationUtil.getApplicationContext();
-        this.executorService = applicationContext.executorService();
-        setParams(httpContext, route);
-        return invokeMethod(httpContext, route);
+    public CompletableFuture<HttpContext> invoke(HttpContext httpContext, RouteDefine routeDefine) throws Exception {
+        AppContext appContext = AppUtil.appContext;
+        Environment environment = appContext.getEnvironment();
+        this.executorService = environment.getExecutorService();
+        setParams(httpContext, routeDefine);
+        return invokeMethod(httpContext, routeDefine);
     }
 
 
-    private void setParams(HttpContext httpContext, Route route) {
+    private void setParams(HttpContext httpContext, RouteDefine routeDefine) {
         HttpRequest httpRequest = httpContext.getHttpRequest();
         HttpResponse httpResponse = httpContext.getHttpResponse();
-        Method method = route.getMethod();
+        Method method = routeDefine.getMethod();
         Parameter[] params = method.getParameters();
         Type[] types = method.getGenericParameterTypes();
         for (int i = 0; i < params.length; i++) {
             Parameter parameter = params[i];
             if (parameter.isAnnotationPresent(RequestBody.class)) {
-                if (ArrayUtil.contains(route.getRequestMethod(), RequestMethod.GET)) {
+                if (ArrayUtil.contains(routeDefine.getRequestMethod(), RequestMethod.GET)) {
                     throw new UnsupportedOperationException("get 请求不支持 RequestBody");
                 } else {
                     Type type = types[i];
                     if (httpRequest.body() == null) {
-                        logger.warn("request body为空");
-                        route.getParams()[i] = null;
+                        log.warn("request body为空");
+                        routeDefine.getParams()[i] = null;
                     } else {
                         JavaType javaType = JsonTools.DEFAULT.getMapper().getTypeFactory().constructType(type);
-                        route.getParams()[i] = JsonTools.DEFAULT.fromJson(httpRequest.body(), javaType);
+                        routeDefine.getParams()[i] = JsonTools.DEFAULT.fromJson(httpRequest.body(), javaType);
                     }
                 }
             } else if (parameter.isAnnotationPresent(RequestParam.class)) {
                 RequestParam requestParam = parameter.getAnnotation(RequestParam.class);
-                String name = StrUtil.isBlank(requestParam.value()) ? route.getParamNames()[i] : requestParam.value();
+                String name = StrUtil.isBlank(requestParam.value()) ? routeDefine.getParamNames()[i] : requestParam.value();
                 List<String> value = httpContext.getHttpRequest().parameters().get(name);
                 if (value == null) {
-                    logger.info("缺少参数名为{}的值！设为null！", name);
+                    log.info("缺少参数名为{}的值！设为null！", name);
                 } else {
-                    route.getParams()[i] = getRealValue(parameter, value);
+                    routeDefine.getParams()[i] = getRealValue(parameter, value);
                 }
             } else if (parameter.isAnnotationPresent(PathParam.class)) {
-                Map<String, String> map = PathMatcher.me.extractUriTemplateVariables(route.getUrlMapping(), httpRequest.url());
-                route.getParams()[i] = Convert.convert(parameter.getType(), map.get(route.getParamNames()[i]));
+                Map<String, String> map = PathMatcher.me.extractUriTemplateVariables(routeDefine.getPath(), httpRequest.url());
+                routeDefine.getParams()[i] = Convert.convert(parameter.getType(), map.get(routeDefine.getParamNames()[i]));
             } else if (parameter.getType().isAssignableFrom(HttpRequest.class)) {
-                route.getParams()[i] = httpRequest;
+                routeDefine.getParams()[i] = httpRequest;
             } else if (parameter.getType().isAssignableFrom(HttpResponse.class)) {
-                route.getParams()[i] = httpResponse;
+                routeDefine.getParams()[i] = httpResponse;
             } else {
-                route.getParams()[i] = null;
+                routeDefine.getParams()[i] = null;
             }
         }
 
     }
 
     private Object getRealValue(Parameter parameter, List<String> value) {
-        Class parameterType = parameter.getType();
+        Class<?> parameterType = parameter.getType();
         if (Collection.class.isAssignableFrom(parameterType)) {
             return Convert.convert(parameter.getType(), value);
         } else {
@@ -99,15 +100,15 @@ public class DefaultRouter implements Router {
         }
     }
 
-    private CompletableFuture<HttpContext> invokeMethod(HttpContext httpContext, Route route) {
+    private CompletableFuture<HttpContext> invokeMethod(HttpContext httpContext, RouteDefine routeDefine) {
         return CompletableFuture.supplyAsync(() -> {
             Object result = null;
-            Method method = route.getMethod();
+            Method method = routeDefine.getMethod();
             if (!method.isAccessible()) {
                 method.setAccessible(true);
             }
             try {
-                result = method.invoke(route.getObject(), route.getParams());
+                result = method.invoke(routeDefine.getObject(), routeDefine.getParams());
             } catch (IllegalAccessException | InvocationTargetException e) {
                 e.printStackTrace();
             }

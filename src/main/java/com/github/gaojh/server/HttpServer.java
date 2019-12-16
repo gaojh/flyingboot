@@ -1,6 +1,6 @@
 package com.github.gaojh.server;
 
-import com.github.gaojh.config.ApplicationConfig;
+import com.github.gaojh.config.Environment;
 import com.github.gaojh.server.handler.HttpServerHandler;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.PooledByteBufAllocator;
@@ -18,22 +18,22 @@ import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.stream.ChunkedWriteHandler;
 import io.netty.util.NetUtil;
 import io.netty.util.concurrent.DefaultThreadFactory;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * @author 高建华
  * @date 2018/6/21 下午2:03
  */
+@Slf4j
 public class HttpServer {
 
     private EventLoopGroup boss;
     private EventLoopGroup worker;
     private ServerBootstrap bootstrap;
+    private Environment environment;
 
-    private static final Logger log = LoggerFactory.getLogger(HttpServer.class);
-
-    public HttpServer() {
+    public HttpServer(Environment environment) {
+        this.environment = environment;
         int bossSize = Integer.parseInt(System.getProperty("server.boss.size", "2"));
         int workerSize = Integer.parseInt(System.getProperty("server.worker.size", "4"));
         if (Epoll.isAvailable()) {
@@ -66,20 +66,20 @@ public class HttpServer {
                         .addLast("support-aggregator", new HttpObjectAggregator(1024 * 1024))
                         .addLast("encoder", new HttpResponseEncoder())
                         .addLast("chunk", new ChunkedWriteHandler())
-                        .addLast("business-handler", new HttpServerHandler());
+                        .addLast("business-handler", new HttpServerHandler(environment));
             }
         });
     }
 
     public synchronized void start() throws InterruptedException {
 
-        ChannelFuture channelFuture = bootstrap.bind(ApplicationConfig.PORT).sync();
-        log.info("启动成功！端口：{}", ApplicationConfig.PORT);
-        if(ApplicationConfig.ENABLE_WEBSOCKET){
-            log.info("WebSocket已开启！端口：{}", ApplicationConfig.PORT);
+        ChannelFuture channelFuture = bootstrap.bind(environment.getPort()).sync();
+        log.info("启动成功！端口：{}", environment.getPort());
+        if(environment.isEnableWebsocket()){
+            log.info("WebSocket已开启！端口：{}", environment.getPort());
         }
         Channel channel = channelFuture.channel();
-        channel.closeFuture().addListener(future -> log.info("停止服务成功，端口：{}", ApplicationConfig.PORT)).sync();
+        channel.closeFuture().addListener(future -> log.info("停止服务成功，端口：{}", environment.getPort())).sync();
         // 监听服务器关闭监听
         Runtime.getRuntime().addShutdownHook(new Thread(this::shutdown));
     }

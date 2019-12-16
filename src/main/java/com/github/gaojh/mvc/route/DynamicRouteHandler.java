@@ -12,7 +12,12 @@ import java.util.Map;
  * @date 2019-04-30 09:38
  */
 @FunctionalInterface
-public interface RouterHandler {
+public interface DynamicRouteHandler {
 
+    /**
+     * 路由处理
+     * @param httpRequest
+     * @return 结果
+     */
     Object handle(HttpRequest httpRequest);
 }

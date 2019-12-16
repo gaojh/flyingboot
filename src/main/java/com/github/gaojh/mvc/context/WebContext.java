@@ -1,57 +1,47 @@
 package com.github.gaojh.mvc.context;
 
 import cn.hutool.core.util.StrUtil;
-import com.github.gaojh.mvc.ApplicationRunner;
+import com.github.gaojh.mvc.setup.SetupContext;
+import com.github.gaojh.mvc.setup.SetupRunner;
 import com.github.gaojh.mvc.annotation.*;
 import com.github.gaojh.mvc.interceptor.HandlerInterceptor;
-import com.github.gaojh.mvc.route.Route;
-import com.github.gaojh.mvc.route.RouterFunction;
-import com.github.gaojh.mvc.route.WebFactory;
+import com.github.gaojh.mvc.interceptor.InterceptorContext;
+import com.github.gaojh.mvc.route.RouteContext;
+import com.github.gaojh.mvc.route.RouteDefine;
 import com.github.gaojh.mvc.utils.ClassUtils;
 import com.github.gaojh.ioc.context.*;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
  * @author 高建华
  * @date 2019-04-29 13:56
  */
-public class WebContext extends WebFactory {
+@Slf4j
+public class WebContext {
 
-    private static final Logger logger = LoggerFactory.getLogger(WebContext.class);
+    private AppContext appContext;
 
-    private ApplicationContext applicationContext;
-
-    public WebContext(ApplicationContext applicationContext) {
-        this.applicationContext = applicationContext;
-        ApplicationUtil.setWebContext(this);
+    public WebContext(AppContext appContext) {
+        this.appContext = appContext;
+        initWebContext();
     }
 
-    public void removeRoute(String url) {
-        super.remoteRoute(url);
-    }
-
-    public void addRoute(String url, Route route) {
-        super.putRoute(url, route);
-    }
-
-    public void initWebContext() {
+    private void initWebContext() {
         initRoutes();
         initInterceptor();
         initApplicationRunners();
     }
 
     private void initRoutes() {
-        List<Class<?>> controllers = applicationContext.getBeanClassOfAnnotation(Controller.class);
+        List<Class<?>> controllers = appContext.getClassDefineByAnnotation(Controller.class);
         for (Class<?> clazz : controllers) {
-            Object object = applicationContext.getBean(clazz);
+            Object object = appContext.getBean(clazz);
 
             RequestMapping controllerRequestMapping = clazz.getAnnotation(RequestMapping.class);
             String[] ctrlPath = controllerRequestMapping == null ? new String[]{"/"} : controllerRequestMapping.value();
@@ -70,46 +60,51 @@ public class WebContext extends WebFactory {
                             url = "/" + url;
                         }
                         url = StrUtil.replace(url, "//", "/");
-                        Route route = Route.builder().type(clazz).object(object).method(method).requestMethod(methodRequestMapping.method()).paramNames(ClassUtils.getMethodParamNames(method)).params(new Object[method.getParameterCount()]).build();
-                        putRoute(url, route);
+                        RouteDefine routeDefine = new RouteDefine();
+                        routeDefine.setType(clazz);
+                        routeDefine.setObject(object);
+                        routeDefine.setMethod(method);
+                        routeDefine.setRequestMethod(methodRequestMapping.method());
+                        routeDefine.setPath(url);
+                        routeDefine.setParamNames(ClassUtils.getMethodParamNames(method));
+                        routeDefine.setParams(new Object[method.getParameterCount()]);
+                        RouteContext.addRoute(url, routeDefine);
                     }
                 }
 
             }
         }
-
-        RouterFunction routerFunction = applicationContext.getBean(RouterFunction.class);
-        Optional.ofNullable(routerFunction).ifPresent(rf -> rf.getRouteList().forEach(webRoute -> putRoute(webRoute.getUrlMapping(), webRoute)));
     }
 
 
     private void initInterceptor() {
-        List<Class<?>> interceptors = applicationContext.getBeanClassOfAnnotation(Interceptor.class);
+        List<Class<?>> interceptors = appContext.getClassDefineByAnnotation(Interceptor.class);
 
         for (Class<?> clazz : interceptors) {
             Interceptor interceptor = clazz.getAnnotation(Interceptor.class);
-            HandlerInterceptor obj = (HandlerInterceptor) applicationContext.getBean(clazz);
+            HandlerInterceptor obj = (HandlerInterceptor) appContext.getBean(clazz);
             for (String path : interceptor.pathPatterns()) {
                 if (StrUtil.isNotBlank(path)) {
-                    logger.debug("注册拦截器：{} ===> {}", path, clazz.getName());
-                    putInterceptor(interceptor, obj);
+                    log.debug("注册拦截器：{} ===> {}", path, clazz.getName());
+                    InterceptorContext.addInterceptor(interceptor, obj);
                 }
             }
         }
     }
 
     private void initApplicationRunners() {
-        List<Class<?>> setups = applicationContext.getBeanClassOfAnnotation(Setup.class);
+        List<Class<?>> setups = appContext.getClassDefineByAnnotation(Setup.class);
         for (Class<?> clazz : setups) {
             Setup setup = clazz.getAnnotation(Setup.class);
-            ApplicationRunner obj = (ApplicationRunner) applicationContext.getBean(clazz);
-            putApplicationRunner(setup.order(), obj);
+            SetupRunner obj = (SetupRunner) appContext.getBean(clazz);
+            log.debug("注册启动后处理器：{}", clazz.getName());
+            SetupContext.addSetupRunner(setup.order(), obj);
         }
         startApplicationRunners();
     }
 
     private void startApplicationRunners() {
-        getApplicationRunners().parallelStream().forEach(ApplicationRunner::run);
+        SetupContext.getSetupRunners().forEach(SetupRunner::run);
     }
 
 }

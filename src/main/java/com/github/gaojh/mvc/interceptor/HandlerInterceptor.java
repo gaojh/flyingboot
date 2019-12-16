@@ -9,8 +9,21 @@ import com.github.gaojh.server.http.HttpResponse;
  */
 public interface HandlerInterceptor {
 
+    /**
+     * 前置处理
+     * @param httpRequest
+     * @param httpResponse
+     * @return
+     * @throws Exception
+     */
     HandlerResponse preHandle(HttpRequest httpRequest, HttpResponse httpResponse) throws Exception;
 
+    /**
+     * 后置处理
+     * @param httpRequest
+     * @param httpResponse
+     * @throws Exception
+     */
     void postHandle(HttpRequest httpRequest, HttpResponse httpResponse) throws Exception;
 
 }
