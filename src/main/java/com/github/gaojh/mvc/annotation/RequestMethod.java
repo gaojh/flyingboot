@@ -9,5 +9,5 @@ public enum RequestMethod {
      *
      */
     POST, GET;
-    private RequestMethod(){}
+    RequestMethod(){}
 }
